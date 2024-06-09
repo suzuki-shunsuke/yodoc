@@ -1,0 +1,5 @@
+tasks:
+  - name: yodoc version
+    command: yodoc -v
+    checks:
+      - exit_code: 0
