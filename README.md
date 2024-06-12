@@ -1,22 +1,58 @@
 # yodoc
 
-Test command results and embed them into document.
+Keep document including commands and their results up to date.
 
 > [!CAUTION]
 > This project is still under development. Don't use this yet.
 
-yodoc is a CLI to maintain documents.
-When you write commands and their results in documents, it's hard to keep them fresh.
-They would become stale.
+yodoc is a CLI to maintain documents including commands and their results.
+When you write commands and their results in documents, it's hard to keep them up to date.
+They would become outdated soon.
 
-`yodoc` enables you to run commands and embeds the result into documents.
-Furthermore, you can test if the result is expected.
+yodoc resolves this issue.
+It generates documents from a configuration file and templates.
+It renderers templates by Go's [text/template](https://pkg.go.dev/text/template).
+It supports custom template functions to execute commands while rendering documents.
 
-You can update tools automatically by Renovate, then you can also update documents automatically by `yodoc`.
+e.g.
+
+configuration file:
+
+```yaml
+tasks:
+  - name: gh version
+    action:
+      run: gh version
+```
+
+template:
+
+```
+{{with Task "gh version"}}
+
+{{.Command}}
+
+{{.CombinedOutput}}
+
+{{end}}
+```
+
+In the above example, yodoc runs `gh version` and embed the command and result into template and generate a document.
+Furthermore, yodoc supports testing command results.
+
+```yaml
+tasks:
+  - name: gh version
+    action:
+      run: gh version
+    checks:
+      - expr: Stdout startsWith "gh version"
+```
 
 ## How to install
 
-`yodoc` is a single binary written in Go. So you only need to put the executable binary into `$PATH`.
+`yodoc` is a single binary written in Go.
+So you only need to put the executable binary into `$PATH`.
 
 ```sh
 go install github.com/suzuki-shunsuke/yodoc@latest

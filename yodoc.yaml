@@ -14,4 +14,4 @@ tasks:
       env:
         FOO: foo
     checks:
-      - exit_code: 0
+      - expr: ExitCode != 0
