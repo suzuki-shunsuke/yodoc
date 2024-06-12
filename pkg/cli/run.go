@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"os"
-
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
@@ -32,8 +30,7 @@ $ yodoc run
 func (rc *runCommand) action(c *cli.Context) error {
 	fs := afero.NewOsFs()
 	configReader := config.NewReader(fs)
-	funcs := render.NewFuncs(c.Context, "", nil, nil, os.Environ, nil)
-	renderer := render.NewRenderer(fs, funcs.Funcs())
+	renderer := render.NewRenderer(fs)
 	ctrl := run.NewController(fs, configReader, renderer)
 	logE := rc.logE
 	log.SetLevel(c.String("log-level"), logE)

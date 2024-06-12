@@ -1,21 +1,27 @@
 package render
 
 import (
+	"context"
 	"fmt"
 	"text/template"
 
 	"github.com/spf13/afero"
+	"github.com/suzuki-shunsuke/yodoc/pkg/config"
 )
 
 type Renderer struct {
-	fs    afero.Fs
-	funcs map[string]any
+	fs         afero.Fs
+	funcs      map[string]any
+	leftDelim  string
+	rightDelim string
+	tasks      map[string]*config.Task
+	dir        string
+	envs       []string
 }
 
-func NewRenderer(fs afero.Fs, funcs map[string]any) *Renderer {
+func NewRenderer(fs afero.Fs) *Renderer {
 	return &Renderer{
-		fs:    fs,
-		funcs: funcs,
+		fs: fs,
 	}
 }
 
@@ -26,7 +32,24 @@ Please don't edit this code comment because yodoc depends on this code comment.
 
 `
 
-func (r *Renderer) Render(src, dest string) error {
+func (r *Renderer) SetDelims(left, right string) {
+	r.leftDelim = left
+	r.rightDelim = right
+}
+
+func (r *Renderer) SetTasks(tasks map[string]*config.Task) {
+	r.tasks = tasks
+}
+
+func (r *Renderer) SetDir(dir string) {
+	r.dir = dir
+}
+
+func (r *Renderer) SetEnvs(envs []string) {
+	r.envs = envs
+}
+
+func (r *Renderer) Render(ctx context.Context, src, dest string) error {
 	srcByte, err := afero.ReadFile(r.fs, src)
 	if err != nil {
 		return fmt.Errorf("open a template file: %w", err)
@@ -42,10 +65,12 @@ func (r *Renderer) Render(src, dest string) error {
 		return fmt.Errorf("write a dest file: %w", err)
 	}
 
-	tpl, err := template.New("_").Funcs(r.funcs).Parse(string(srcByte))
+	tpl, err := template.New("_").Funcs(Funcs(ctx, r.tasks, r.dir, r.envs)).Parse(string(srcByte))
 	if err != nil {
 		return fmt.Errorf("parse a template: %w", err)
 	}
+
+	tpl.Delims(r.leftDelim, r.rightDelim)
 
 	if err := tpl.Execute(destFile, nil); err != nil {
 		return fmt.Errorf("execute a template: %w", err)

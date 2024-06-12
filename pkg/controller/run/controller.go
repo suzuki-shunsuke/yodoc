@@ -1,6 +1,8 @@
 package run
 
 import (
+	"context"
+
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
 )
@@ -16,7 +18,9 @@ type ConfigReader interface {
 }
 
 type Renderer interface {
-	Render(src, dest string) error
+	Render(ctx context.Context, src, dest string) error
+	SetDelims(left, right string)
+	SetTasks(tasks map[string]*config.Task)
 }
 
 func NewController(fs afero.Fs, configReader ConfigReader, renderer Renderer) *Controller {

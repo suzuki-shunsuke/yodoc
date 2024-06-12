@@ -4,7 +4,7 @@
 src: src
 dest: dest
 tasks:
-  - name: yodoc version
-    command: yodoc -v
+  - name: gh version
+    run: gh version
     checks:
       - exit_code: 0
