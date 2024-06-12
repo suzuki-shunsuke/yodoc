@@ -32,7 +32,7 @@ func (t *Task) Run(taskName string) (*CommandResult, error) {
 	if len(task.Env) != 0 {
 		envs = append(envs, task.GetEnv()...)
 	}
-	c := NewCommand(t.ctx, task.Shell, t.dir, envs)
+	c := NewCommand(t.ctx, task.Shell, task.GetDir(), envs)
 	if task.Run != "" {
 		return c.Run(task.Run), nil
 	}

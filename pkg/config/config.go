@@ -83,6 +83,10 @@ func (t *Task) SetDir(dir string) {
 	t.AfterScriptPath = filepath.Join(dir, t.AfterScript)
 }
 
+func (t *Task) GetDir() string {
+	return t.dir
+}
+
 func (t *Task) ReadScript(fs afero.Fs) error {
 	if t.Script != "" {
 		if b, err := afero.ReadFile(fs, t.ScriptPath); err != nil {

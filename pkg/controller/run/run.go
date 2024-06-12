@@ -15,13 +15,27 @@ import (
 	"github.com/suzuki-shunsuke/yodoc/pkg/render"
 )
 
-func (c *Controller) Run(ctx context.Context, _ *logrus.Entry) error {
+type Param struct {
+	ConfigFilePath string
+}
+
+func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) error {
 	// read config
 	cfg := &config.Config{}
-	cfgPath := "yodoc.yaml"
+	cfgPath := param.ConfigFilePath
+	if cfgPath == "" {
+		a, err := c.configFinder.Find()
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+		cfgPath = a
+	}
 	if err := c.configReader.Read(cfgPath, cfg); err != nil {
 		return fmt.Errorf("read a configuration file: %w", err)
 	}
+
+	src := filepath.Join(filepath.Dir(cfgPath), cfg.Src)
+	dest := filepath.Join(filepath.Dir(cfgPath), cfg.Dest)
 
 	tasks := make(map[string]*config.Task, len(cfg.Tasks))
 	for _, task := range cfg.Tasks {
@@ -38,12 +52,12 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry) error {
 	renderer.SetDelims(cfg.Delim.GetLeft(), cfg.Delim.GetRight())
 	renderer.SetTasks(tasks)
 	// create a destination directory
-	if err := osfile.MkdirAll(c.fs, cfg.Dest); err != nil {
+	if err := osfile.MkdirAll(c.fs, dest); err != nil {
 		return fmt.Errorf("create a destination directory: %w", err)
 	}
 	// find and read template
 	files := []string{}
-	if err := afero.Walk(c.fs, cfg.Src, func(p string, _ os.FileInfo, err error) error {
+	if err := afero.Walk(c.fs, src, func(p string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -55,12 +69,12 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry) error {
 		return fmt.Errorf("walk the source directory: %w", err)
 	}
 	for _, file := range files {
-		rel, err := filepath.Rel(cfg.Src, file)
+		rel, err := filepath.Rel(src, file)
 		if err != nil {
 			return fmt.Errorf("get a relative path: %w", err)
 		}
-		dest := filepath.Join(cfg.Dest, rel)
-		if a, err := filepath.Rel(cfg.Src, dest); err != nil {
+		dest := filepath.Join(dest, rel)
+		if a, err := filepath.Rel(src, dest); err != nil {
 			return fmt.Errorf("get a relative path: %w", err)
 		} else if !strings.HasPrefix(a, "..") {
 			return errors.New("dest must not include in source directory")

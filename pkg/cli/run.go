@@ -31,9 +31,12 @@ func (rc *runCommand) action(c *cli.Context) error {
 	fs := afero.NewOsFs()
 	configReader := config.NewReader(fs)
 	renderer := render.NewRenderer(fs)
-	ctrl := run.NewController(fs, configReader, renderer)
+	finder := config.NewFinder(fs)
+	ctrl := run.NewController(fs, finder, configReader, renderer)
 	logE := rc.logE
 	log.SetLevel(c.String("log-level"), logE)
 	log.SetColor(c.String("log-color"), logE)
-	return ctrl.Run(c.Context, logE) //nolint:wrapcheck
+	return ctrl.Run(c.Context, logE, &run.Param{
+		ConfigFilePath: c.String("config"),
+	}) //nolint:wrapcheck
 }

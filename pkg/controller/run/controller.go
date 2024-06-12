@@ -10,7 +10,12 @@ import (
 type Controller struct {
 	fs           afero.Fs
 	configReader ConfigReader
+	configFinder ConfigFinder
 	renderer     Renderer
+}
+
+type ConfigFinder interface {
+	Find() (string, error)
 }
 
 type ConfigReader interface {
@@ -23,7 +28,7 @@ type Renderer interface {
 	SetTasks(tasks map[string]*config.Task)
 }
 
-func NewController(fs afero.Fs, configReader ConfigReader, renderer Renderer) *Controller {
+func NewController(fs afero.Fs, configFinder ConfigFinder, configReader ConfigReader, renderer Renderer) *Controller {
 	return &Controller{
 		fs:           fs,
 		configReader: configReader,
