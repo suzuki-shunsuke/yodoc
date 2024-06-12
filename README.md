@@ -10,44 +10,11 @@ When you write commands and their results in documents, it's hard to keep them u
 They would become outdated soon.
 
 yodoc resolves this issue.
-It generates documents from a configuration file and templates.
-It renderers templates by Go's [text/template](https://pkg.go.dev/text/template).
-It supports custom template functions to execute commands while rendering documents.
+It executes commands, tests results, and generates documents based on template files.
 
-e.g.
+## :warning: Security
 
-configuration file:
-
-```yaml
-tasks:
-  - name: gh version
-    action:
-      run: gh version
-```
-
-template:
-
-```
-{{with Task "gh version"}}
-
-{{.Command}}
-
-{{.CombinedOutput}}
-
-{{end}}
-```
-
-In the above example, yodoc runs `gh version` and embed the command and result into template and generate a document.
-Furthermore, yodoc supports testing command results.
-
-```yaml
-tasks:
-  - name: gh version
-    action:
-      run: gh version
-    checks:
-      - expr: Stdout startsWith "gh version"
-```
+yodoc executes commands according to the configuration file, so you shouldn't run yodoc with an untrusted configuration file.
 
 ## How to install
 
@@ -60,58 +27,178 @@ go install github.com/suzuki-shunsuke/yodoc@latest
 
 ## How to use
 
+1. Scaffold a configuration file by `yodoc init`.
+
+```sh
+yodoc init # Scaffold a configuration file
+```
+
+2. Edit the configuration file.
+3. Write templates in the source directory.
+4. Generate documents by `yodoc run`.
+
 ```sh
 yodoc run # Update document
-yodoc watch # Watch file changes and update document automatically
 ```
 
-You write template documents, then `yodoc` generates documents using them.
-In template documents, you use Go's [text/template](https://pkg.go.dev/text/template).
+## Usage
 
-```
-{{Command "echo hello"}}
 ```
 
 ```
-{{Task "yodoc version"}}
+
+## Environment variables
+
+- `YODOC_CONFIG`: a configuration file path
+- `YODOC_LOG_COLOR`: log color mode: `auto`, `always`, `never`
+- `YODOC_LOG_LEVEL`: trace, debug, info, warn, error, fatal, panic
+
+## Configuration file paths
+
+`yodoc` searches a configuration according to the following order.
+If no configuration file is found, `yodoc` fails.
+
+1. `--config`
+1. `YODOC_CONFIG`
+1. `yodoc.yaml`, `.yodoc.yaml` in the current directory :warning: `yodoc.yml` and `.yodoc.yml` are ignored
+
+## Configuration file
+
+yodoc.yaml
+
+```yaml
+# File pathes are relative paths from the configuration file.
+src: src # source directory where templates files are located
+dest: . # destination directory where files are generated
+delim:
+  # delim is a pair of delimiters in templates.
+  # This is optional.
+  left: "{{" # The default value is "{{"
+  right: "}}" # The default value is "}}"
+tasks:
+  # A list of tasks
+  # ...
+  - name: gh version
+    action:
+      run: gh version
 ```
 
-```
-{{with Task "hello"}}	
+`src`, `dest`, and `tasks` are required.
+yodoc searches template files from `src`, and generates documents in `dest`.
+The file extension must be either `.md` or `.mdx`.
 
-$ {{.Command}}
+### .tasks
+
+```yaml
+- name: gh version
+  action:
+    run: gh version
+  # before and after are optional.
+  # The structure is same as `action`.
+  before:
+    run: mkdir foo
+  after:
+    run: rm -R foo
+  checks:
+    # A list of checks.
+    - expr: ExitCode == 1
+```
+
+The command of `before` and `after` must succeed, otherwise it fails to render the template.
+
+### .tasks[].action, before, after
+
+```yaml
+# Either `run` or `script` is required.
+# Others are optional.
+run: gh version
+script: foo.sh # relative path from the configuration file
+shell: ["sh", "-c"] # shell to execute the command
+dir: foo # The directory where the command is executed. A relative path from the configuration file
+env:
+  # environment variables to pass the command
+  # Go's template is available.
+  FOO: '{{env "HOME"}}/foo'
+```
+
+### .tasks[].checks[]
+
+```yaml
+# expr is an expression of 
+- expr: ExitCode == 0
+```
+
+`expr` is an expression of [expr-lang/expr](https://github.com/expr-lang/expr).
+The expression must return a boolean.
+
+The following variables are passed.
+
+- `Command`: Executed command
+- `ExitCode`: Exit code
+- `Stdout`: Standard output 
+- `Stderr`: Standard error output
+- `CombinedOutput`: Output combined Stdout and Stderr
+- `RunError`: Error string if it fails to execute the command
+
+All checks must be true, otherwise the task fails.
+
+## Template
+
+Template files are renderered by Go's [text/template](https://pkg.go.dev/text/template).
+
+### Template functions
+
+[sprig functions](https://masterminds.github.io/sprig/) are available.
+But the following functions are unavailable for security reason.
+
+- `env`
+- `expandenv`
+- `getHostByName`
+
+Furthermore, some custom functions are available.
+
+- `Task`
+
+#### Task
+
+```
+{{with Task "gh version"}}
+
+{{.Command}}
 
 {{.CombinedOutput}}
 
 {{end}}
 ```
 
-## Configuration file
-
-yodoc.yaml
-
-```sh
-yodoc run src/README.md
-```
-
-```
-<!-- yodoc: src/README.md -->
-```
+Task takes one argument, which is a task name.
+The task must be defined in the configuration file.
 
 ```yaml
-# src/README.md => README.md
-# src/src/README.md => src/README.md
-src: src 
-dest: .
-files:
-  - source: "*_yodoc.md"
-  - dest: ""
 tasks:
-  - name: yodoc version
-    command: yodoc -v
-    checks:
-      - exit_code: 0
+  - name: gh version
+    # ...
 ```
+
+1. Run `before`
+1. Run `action`
+1. Run `after`
+1. Test the result by `checks`
+
+Task executes a command and returns its result.
+The result has the following attributes.
+
+- `Command`: Executed command
+- `ExitCode`: Exit code
+- `Stdout`: Standard output 
+- `Stderr`: Standard error output
+- `CombinedOutput`: Output combined Stdout and Stderr
+- `RunError`: Error string if it fails to execute the command
+
+## Automatic update by CI
+
+You can update documents by CI automatically, but you need to be care about the security.
+We recommend executing yodoc by `push` event on the default branch and creating a pull request to update documents.
 
 ## LICENSE
 
