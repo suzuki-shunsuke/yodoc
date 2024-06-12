@@ -29,19 +29,19 @@ func (t *Task) Run(taskName string) (*CommandResult, error) {
 		return nil, errors.New("task not found")
 	}
 	envs := t.envs
-	if len(task.Env) != 0 {
-		envs = append(envs, task.GetEnv()...)
+	if len(task.Action.Env) != 0 {
+		envs = append(envs, task.Action.GetEnv()...)
 	}
-	c := NewCommand(t.ctx, task.Shell, task.GetDir(), envs)
-	if task.Run != "" {
-		return c.Run(task.Run), nil
+	c := NewCommand(t.ctx, task.Action.Shell, task.Action.GetDir(), envs)
+	if task.Action.Run != "" {
+		return c.Run(task.Action.Run), nil
 	}
-	shell := task.Shell
+	shell := task.Action.Shell
 	if shell == nil {
 		shell = []string{"sh"}
 	}
 	c.Shell = shell
-	result := c.Run(task.ScriptPath)
-	result.Command = task.GetScript()
+	result := c.Run(task.Action.ScriptPath)
+	result.Command = task.Action.GetScript()
 	return result, nil
 }

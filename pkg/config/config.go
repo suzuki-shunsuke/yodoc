@@ -33,81 +33,97 @@ func (d *Delim) GetRight() string {
 	return d.Right
 }
 
+type Action struct {
+	Shell      []string
+	Run        string
+	script     string
+	Script     string
+	ScriptPath string
+	dir        string
+	Dir        string
+	Env        map[string]string
+	env        []string
+}
+
 type Task struct {
-	Name             string
-	Shell            []string
-	Run              string
-	Script           string
-	ScriptPath       string
-	script           string
-	dir              string
-	Dir              string
-	Env              map[string]string
-	env              []string
-	BeforeScript     string `yaml:"before_script"`
-	AfterScript      string `yaml:"after_script"`
-	beforeScript     string
-	afterScript      string
-	BeforeScriptPath string
-	AfterScriptPath  string
-	Checks           []*Check
+	Name   string
+	Action *Action
+	Before *Action
+	After  *Action
+	Checks []*Check
 }
 
 type Check struct {
 	Expr string
 }
 
-func (t *Task) GetScript() string {
-	if t.Run != "" {
-		return t.Run
+func (a *Action) GetScript() string {
+	if a.Run != "" {
+		return a.Run
 	}
-	return t.script
+	return a.script
 }
 
 func (t *Task) SetEnv() {
-	envs := make([]string, 0, len(t.Env))
-	for k, v := range t.Env {
-		envs = append(envs, k+"="+v)
-	}
-	t.env = envs
+	t.Action.SetEnv()
+	t.After.SetEnv()
+	t.Before.SetEnv()
 }
 
-func (t *Task) GetEnv() []string {
-	return t.env
+func (a *Action) SetEnv() {
+	if a == nil {
+		return
+	}
+	envs := make([]string, 0, len(a.Env))
+	for k, v := range a.Env {
+		envs = append(envs, k+"="+v)
+	}
+	a.env = envs
+}
+
+func (a *Action) GetEnv() []string {
+	return a.env
 }
 
 func (t *Task) SetDir(dir string) {
-	t.dir = filepath.Join(dir, t.Dir)
-	t.ScriptPath = filepath.Join(dir, t.Script)
-	t.BeforeScriptPath = filepath.Join(dir, t.BeforeScript)
-	t.AfterScriptPath = filepath.Join(dir, t.AfterScript)
+	t.Action.SetDir(dir)
+	t.Before.SetDir(dir)
+	t.After.SetDir(dir)
 }
 
-func (t *Task) GetDir() string {
-	return t.dir
+func (a *Action) SetDir(dir string) {
+	if a == nil {
+		return
+	}
+	a.dir = filepath.Join(dir, a.Dir)
+	a.ScriptPath = filepath.Join(dir, a.Script)
+}
+
+func (a *Action) GetDir() string {
+	return a.dir
+}
+
+func (a *Action) ReadScript(fs afero.Fs) error {
+	if a == nil || a.script == "" {
+		return nil
+	}
+	b, err := afero.ReadFile(fs, a.ScriptPath)
+	if err != nil {
+		return fmt.Errorf("read a script file: %w", err)
+	}
+	a.script = string(b)
+	return nil
 }
 
 func (t *Task) ReadScript(fs afero.Fs) error {
-	if t.Script != "" {
-		if b, err := afero.ReadFile(fs, t.ScriptPath); err != nil {
-			return fmt.Errorf("read a script file: %w", err)
-		} else {
-			t.script = string(b)
-		}
+	if err := t.Action.ReadScript(fs); err != nil {
+		return err
 	}
-	if t.AfterScript != "" {
-		if b, err := afero.ReadFile(fs, t.AfterScriptPath); err != nil {
-			return fmt.Errorf("read an after script file: %w", err)
-		} else {
-			t.afterScript = string(b)
-		}
+	if err := t.Before.ReadScript(fs); err != nil {
+		return err
 	}
-	if t.BeforeScript != "" {
-		if b, err := afero.ReadFile(fs, t.BeforeScriptPath); err != nil {
-			return fmt.Errorf("read a before script file: %w", err)
-		} else {
-			t.beforeScript = string(b)
-		}
+	if err := t.After.ReadScript(fs); err != nil {
+		return err
 	}
 	return nil
 }

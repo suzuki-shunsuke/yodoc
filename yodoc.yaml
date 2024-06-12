@@ -5,7 +5,13 @@ src: src
 dest: dest
 tasks:
   - name: gh version
-    # run: gh version
-    script: gh_version.sh
+    action:
+      run: |
+        echo "$FOO"
+        pwd
+      dir: src
+      # script: gh_version.sh
+      env:
+        FOO: foo
     checks:
       - exit_code: 0

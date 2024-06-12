@@ -32,6 +32,7 @@ func NewController(fs afero.Fs, configFinder ConfigFinder, configReader ConfigRe
 	return &Controller{
 		fs:           fs,
 		configReader: configReader,
+		configFinder: configFinder,
 		renderer:     renderer,
 	}
 }
