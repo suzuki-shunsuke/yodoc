@@ -18,12 +18,17 @@ import (
 func (c *Controller) Run(ctx context.Context, _ *logrus.Entry) error {
 	// read config
 	cfg := &config.Config{}
-	if err := c.configReader.Read("yodoc.yaml", cfg); err != nil {
+	cfgPath := "yodoc.yaml"
+	if err := c.configReader.Read(cfgPath, cfg); err != nil {
 		return fmt.Errorf("read a configuration file: %w", err)
 	}
 
 	tasks := make(map[string]*config.Task, len(cfg.Tasks))
 	for _, task := range cfg.Tasks {
+		task.SetDir(filepath.Dir(cfgPath))
+		if err := task.ReadScript(c.fs); err != nil {
+			return err //nolint:wrapcheck
+		}
 		tasks[task.Name] = task
 	}
 

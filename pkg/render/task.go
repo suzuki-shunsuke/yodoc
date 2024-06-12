@@ -29,5 +29,15 @@ func (t *Task) Run(taskName string) (*CommandResult, error) {
 		return nil, errors.New("task not found")
 	}
 	c := NewCommand(t.ctx, task.Shell, t.dir, t.envs)
-	return c.Run(task.Run), nil
+	if task.Run != "" {
+		return c.Run(task.Run), nil
+	}
+	shell := task.Shell
+	if shell == nil {
+		shell = []string{"sh"}
+	}
+	c.Shell = shell
+	result := c.Run(task.ScriptPath)
+	result.Command = task.GetScript()
+	return result, nil
 }

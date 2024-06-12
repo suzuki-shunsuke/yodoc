@@ -1,5 +1,12 @@
 package config
 
+import (
+	"fmt"
+	"path/filepath"
+
+	"github.com/spf13/afero"
+)
+
 type Config struct {
 	Src   string
 	Dest  string
@@ -27,17 +34,63 @@ func (d *Delim) GetRight() string {
 }
 
 type Task struct {
-	Name         string
-	Shell        []string
-	Run          string
-	Script       string
-	Dir          string
-	Env          map[string]string
-	BeforeScript string `yaml:"before_script"`
-	AfterScript  string `yaml:"after_script"`
-	Checks       []*Check
+	Name             string
+	Shell            []string
+	Run              string
+	Script           string
+	ScriptPath       string
+	script           string
+	dir              string
+	Dir              string
+	Env              map[string]string
+	BeforeScript     string `yaml:"before_script"`
+	AfterScript      string `yaml:"after_script"`
+	beforeScript     string
+	afterScript      string
+	BeforeScriptPath string
+	AfterScriptPath  string
+	Checks           []*Check
 }
 
 type Check struct {
 	Expr string
+}
+
+func (t *Task) GetScript() string {
+	if t.Run != "" {
+		return t.Run
+	}
+	return t.script
+}
+
+func (t *Task) SetDir(dir string) {
+	t.dir = filepath.Join(dir, t.Dir)
+	t.ScriptPath = filepath.Join(dir, t.Script)
+	t.BeforeScriptPath = filepath.Join(dir, t.BeforeScript)
+	t.AfterScriptPath = filepath.Join(dir, t.AfterScript)
+}
+
+func (t *Task) ReadScript(fs afero.Fs) error {
+	if t.Script != "" {
+		if b, err := afero.ReadFile(fs, t.ScriptPath); err != nil {
+			return fmt.Errorf("read a script file: %w", err)
+		} else {
+			t.script = string(b)
+		}
+	}
+	if t.AfterScript != "" {
+		if b, err := afero.ReadFile(fs, t.AfterScriptPath); err != nil {
+			return fmt.Errorf("read an after script file: %w", err)
+		} else {
+			t.afterScript = string(b)
+		}
+	}
+	if t.BeforeScript != "" {
+		if b, err := afero.ReadFile(fs, t.BeforeScriptPath); err != nil {
+			return fmt.Errorf("read a before script file: %w", err)
+		} else {
+			t.beforeScript = string(b)
+		}
+	}
+	return nil
 }
