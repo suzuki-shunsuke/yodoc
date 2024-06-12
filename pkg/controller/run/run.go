@@ -1,14 +1,9 @@
 package run
 
 import (
-	"bytes"
 	"context"
-	_ "embed"
-	"errors"
 	"fmt"
-	"html/template"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -25,7 +20,7 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry) error {
 	}
 	// find and read template
 	files := []string{}
-	if err := afero.Walk(c.fs, cfg.Src, func(p string, info os.FileInfo, err error) error {
+	if err := afero.Walk(c.fs, cfg.Src, func(p string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -46,81 +41,6 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry) error {
 		if err := c.renderer.Render(file, dest); err != nil {
 			return fmt.Errorf("render a file: %w", err)
 		}
-	}
-	return nil
-}
-
-type commander struct {
-	ctx   context.Context
-	tasks map[string]*Task
-}
-
-type Task struct {
-	Name    string
-	Command string
-}
-
-func (c *commander) command(s string) (string, error) {
-	cmd := exec.CommandContext(c.ctx, "sh", "-c", s)
-	combinedOutput := &bytes.Buffer{}
-
-	cmd.Stdout = combinedOutput
-	cmd.Stderr = combinedOutput
-
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-	return combinedOutput.String(), nil
-}
-
-func (c *commander) task(taskID string) (any, error) {
-	task, ok := c.tasks[taskID]
-	if !ok {
-		return nil, errors.New("task not found")
-	}
-	s, err := c.command(task.Command)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{
-		"Command":        task.Command,
-		"CombinedOutput": s,
-	}, nil
-}
-
-func core() error {
-	tasks := []*Task{
-		{
-			Name:    "hello",
-			Command: "echo Hello",
-		},
-	}
-	ctx := context.Background()
-	cmdr := &commander{
-		ctx: ctx,
-	}
-	cmdr.tasks = make(map[string]*Task, len(tasks))
-	for _, task := range tasks {
-		cmdr.tasks[task.Name] = task
-	}
-	const text = `
-{{with Task "hello"}}	
-
-$ {{.Command}}
-
-{{.CombinedOutput}}
-
-{{end}}
-`
-	tpl, err := template.New("_").Funcs(map[string]any{
-		"Command": cmdr.command,
-		"Task":    cmdr.task,
-	}).Parse(text)
-	if err != nil {
-		return err
-	}
-	if err := tpl.Execute(os.Stdout, nil); err != nil {
-		return err
 	}
 	return nil
 }

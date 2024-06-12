@@ -8,7 +8,7 @@ import (
 )
 
 type Funcs struct {
-	ctx        context.Context
+	ctx        context.Context //nolint:containedctx
 	dir        string
 	envs       []string
 	appendEnvs []string
@@ -48,7 +48,7 @@ func (f *Funcs) env() []string {
 	return append(f.envs, f.appendEnvs...)
 }
 
-func (f *Funcs) Command(s string) (*CommandResult, error) {
+func (f *Funcs) Command(s string) *CommandResult {
 	cmd := exec.CommandContext(f.ctx, "sh", "-c", s)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -62,23 +62,15 @@ func (f *Funcs) Command(s string) (*CommandResult, error) {
 
 	cmd.Env = f.env()
 
-	if len(f.appendEnvs) != 0 {
-		if f.envs == nil {
-			cmd.Env = append(f.environ(), f.appendEnvs...)
-		} else {
-			cmd.Env = append(f.envs, f.appendEnvs...)
-		}
-	}
-
 	if err := cmd.Run(); err != nil {
 		return &CommandResult{
 			RunError: err,
-		}, nil
+		}
 	}
 	return &CommandResult{
 		Stdout:         stdout.String,
 		Stderr:         stderr.String,
 		CombinedOutput: combinedOutput.String,
 		ExitCode:       cmd.ProcessState.ExitCode(),
-	}, nil
+	}
 }

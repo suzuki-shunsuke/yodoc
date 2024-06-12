@@ -25,9 +25,9 @@ $ yodoc run
 	}
 }
 
-func (lc *runCommand) action(c *cli.Context) error {
+func (rc *runCommand) action(c *cli.Context) error {
 	ctrl := run.NewController(afero.NewOsFs())
-	logE := lc.logE
+	logE := rc.logE
 	log.SetLevel(c.String("log-level"), logE)
 	log.SetColor(c.String("log-color"), logE)
 	return ctrl.Run(c.Context, logE) //nolint:wrapcheck
