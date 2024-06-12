@@ -43,6 +43,7 @@ type Task struct {
 	dir              string
 	Dir              string
 	Env              map[string]string
+	env              []string
 	BeforeScript     string `yaml:"before_script"`
 	AfterScript      string `yaml:"after_script"`
 	beforeScript     string
@@ -61,6 +62,18 @@ func (t *Task) GetScript() string {
 		return t.Run
 	}
 	return t.script
+}
+
+func (t *Task) SetEnv() {
+	envs := make([]string, 0, len(t.Env))
+	for k, v := range t.Env {
+		envs = append(envs, k+"="+v)
+	}
+	t.env = envs
+}
+
+func (t *Task) GetEnv() []string {
+	return t.env
 }
 
 func (t *Task) SetDir(dir string) {

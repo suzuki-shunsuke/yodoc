@@ -25,6 +25,7 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry) error {
 
 	tasks := make(map[string]*config.Task, len(cfg.Tasks))
 	for _, task := range cfg.Tasks {
+		task.SetEnv()
 		task.SetDir(filepath.Dir(cfgPath))
 		if err := task.ReadScript(c.fs); err != nil {
 			return err //nolint:wrapcheck

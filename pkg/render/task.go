@@ -28,7 +28,11 @@ func (t *Task) Run(taskName string) (*CommandResult, error) {
 	if !ok {
 		return nil, errors.New("task not found")
 	}
-	c := NewCommand(t.ctx, task.Shell, t.dir, t.envs)
+	envs := t.envs
+	if len(task.Env) != 0 {
+		envs = append(envs, task.GetEnv()...)
+	}
+	c := NewCommand(t.ctx, task.Shell, t.dir, envs)
 	if task.Run != "" {
 		return c.Run(task.Run), nil
 	}
