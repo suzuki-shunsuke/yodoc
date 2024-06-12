@@ -19,8 +19,10 @@ type Renderer interface {
 	Render(src, dest string) error
 }
 
-func NewController(fs afero.Fs) *Controller {
+func NewController(fs afero.Fs, configReader ConfigReader, renderer Renderer) *Controller {
 	return &Controller{
-		fs: fs,
+		fs:           fs,
+		configReader: configReader,
+		renderer:     renderer,
 	}
 }

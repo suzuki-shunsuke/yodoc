@@ -1,6 +1,8 @@
 ---
 # yodoc
 # https://github.com/suzuki-shunsuke/yodoc
+src: src
+dest: dest
 tasks:
   - name: yodoc version
     command: yodoc -v

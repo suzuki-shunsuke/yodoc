@@ -16,6 +16,17 @@ type Funcs struct {
 	tasks      map[string]*Task
 }
 
+func NewFuncs(ctx context.Context, dir string, envs, appendEnvs []string, environ func() []string, tasks map[string]*Task) *Funcs {
+	return &Funcs{
+		ctx:        ctx,
+		dir:        dir,
+		envs:       envs,
+		appendEnvs: appendEnvs,
+		environ:    environ,
+		tasks:      tasks,
+	}
+}
+
 type Task struct {
 	Name string
 }
@@ -28,10 +39,11 @@ func (f *Funcs) Funcs() map[string]any {
 }
 
 type CommandResult struct {
+	Command        string
 	ExitCode       int
-	Stdout         func() string
-	Stderr         func() string
-	CombinedOutput func() string
+	Stdout         string
+	Stderr         string
+	CombinedOutput string
 	RunError       error
 }
 
@@ -64,13 +76,15 @@ func (f *Funcs) Command(s string) *CommandResult {
 
 	if err := cmd.Run(); err != nil {
 		return &CommandResult{
+			Command:  s,
 			RunError: err,
 		}
 	}
 	return &CommandResult{
-		Stdout:         stdout.String,
-		Stderr:         stderr.String,
-		CombinedOutput: combinedOutput.String,
+		Command:        s,
+		Stdout:         stdout.String(),
+		Stderr:         stderr.String(),
+		CombinedOutput: combinedOutput.String(),
 		ExitCode:       cmd.ProcessState.ExitCode(),
 	}
 }
