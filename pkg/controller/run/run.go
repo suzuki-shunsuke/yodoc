@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
+	"github.com/suzuki-shunsuke/yodoc/pkg/osfile"
 )
 
 func (c *Controller) Run(ctx context.Context, _ *logrus.Entry) error {
@@ -17,6 +18,10 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry) error {
 	cfg := &config.Config{}
 	if err := c.configReader.Read("yodoc.yaml", cfg); err != nil {
 		return fmt.Errorf("read a configuration file: %w", err)
+	}
+	// create a destination directory
+	if err := osfile.MkdirAll(c.fs, cfg.Dest); err != nil {
+		return fmt.Errorf("create a destination directory: %w", err)
 	}
 	// find and read template
 	files := []string{}
