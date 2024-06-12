@@ -40,11 +40,36 @@ In template documents, you use Go's [text/template](https://pkg.go.dev/text/temp
 {{Task "yodoc version"}}
 ```
 
+```
+{{with Task "hello"}}	
+
+$ {{.Command}}
+
+{{.CombinedOutput}}
+
+{{end}}
+```
+
 ## Configuration file
 
 yodoc.yaml
 
+```sh
+yodoc run src/README.md
+```
+
+```
+<!-- yodoc: src/README.md -->
+```
+
 ```yaml
+# src/README.md => README.md
+# src/src/README.md => src/README.md
+src: src 
+dest: .
+files:
+  - source: "*_yodoc.md"
+  - dest: ""
 tasks:
   - name: yodoc version
     command: yodoc -v
