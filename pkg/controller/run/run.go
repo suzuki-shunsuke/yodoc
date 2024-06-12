@@ -39,6 +39,11 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) err
 
 	tasks := make(map[string]*config.Task, len(cfg.Tasks))
 	for _, task := range cfg.Tasks {
+		for _, check := range task.Checks {
+			if err := check.Build(); err != nil {
+				return fmt.Errorf("build a check: %w", err)
+			}
+		}
 		task.SetEnv()
 		task.SetDir(filepath.Dir(cfgPath))
 		if err := task.ReadScript(c.fs); err != nil {

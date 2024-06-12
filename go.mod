@@ -3,6 +3,7 @@ module github.com/suzuki-shunsuke/yodoc
 go 1.22.4
 
 require (
+	github.com/expr-lang/expr v1.16.9
 	github.com/mattn/go-colorable v0.1.13
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/afero v1.11.0
