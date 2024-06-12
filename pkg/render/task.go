@@ -23,25 +23,58 @@ func NewTask(ctx context.Context, tasks map[string]*config.Task, dir string, env
 	}
 }
 
+func (t *Task) run(act *config.Action) (*CommandResult, error) {
+	envs := t.envs
+	if len(act.Env) != 0 {
+		envs = append(envs, act.GetEnv()...)
+	}
+	c := NewCommand(t.ctx, act.Shell, act.GetDir(), envs)
+	if act.Run != "" {
+		return c.Run(act.Run), nil
+	}
+	shell := act.Shell
+	if shell == nil {
+		shell = []string{"sh"}
+	}
+	c.Shell = shell
+	result := c.Run(act.ScriptPath)
+	result.Command = act.GetScript()
+	return result, nil
+}
+
 func (t *Task) Run(taskName string) (*CommandResult, error) {
 	task, ok := t.tasks[taskName]
 	if !ok {
 		return nil, errors.New("task not found")
 	}
-	envs := t.envs
-	if len(task.Action.Env) != 0 {
-		envs = append(envs, task.Action.GetEnv()...)
+
+	if task.Before != nil {
+		if cr, err := t.run(task.Before); err != nil {
+			return nil, err
+		} else if cr.RunError != nil {
+			return cr, cr.RunError
+		} else if cr.ExitCode != 0 {
+			return cr, errors.New("command failed")
+		}
 	}
-	c := NewCommand(t.ctx, task.Action.Shell, task.Action.GetDir(), envs)
-	if task.Action.Run != "" {
-		return c.Run(task.Action.Run), nil
+
+	cr, err := t.run(task.Action)
+	if err != nil {
+		return nil, err
 	}
-	shell := task.Action.Shell
-	if shell == nil {
-		shell = []string{"sh"}
+	if cr.RunError != nil {
+		return cr, cr.RunError
 	}
-	c.Shell = shell
-	result := c.Run(task.Action.ScriptPath)
-	result.Command = task.Action.GetScript()
-	return result, nil
+
+	if task.After != nil {
+		if cr, err := t.run(task.After); err != nil {
+			return nil, err
+		} else if cr.RunError != nil {
+			return cr, cr.RunError
+		} else if cr.ExitCode != 0 {
+			return cr, errors.New("command failed")
+		}
+	}
+
+	return cr, nil
 }
