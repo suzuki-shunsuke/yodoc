@@ -5,6 +5,7 @@ src: src
 dest: dest
 tasks:
   - name: gh version
-    run: gh version
+    # run: gh version
+    script: gh_version.sh
     checks:
       - exit_code: 0
