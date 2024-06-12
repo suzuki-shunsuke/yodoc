@@ -36,7 +36,7 @@ func (rc *runCommand) action(c *cli.Context) error {
 	logE := rc.logE
 	log.SetLevel(c.String("log-level"), logE)
 	log.SetColor(c.String("log-color"), logE)
-	return ctrl.Run(c.Context, logE, &run.Param{
+	return ctrl.Run(c.Context, logE, &run.Param{ //nolint:wrapcheck
 		ConfigFilePath: c.String("config"),
-	}) //nolint:wrapcheck
+	})
 }

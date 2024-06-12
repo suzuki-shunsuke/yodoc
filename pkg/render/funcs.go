@@ -6,10 +6,10 @@ import (
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
 )
 
-func Funcs(ctx context.Context, tasks map[string]*config.Task, dir string, envs []string) map[string]any {
+func Funcs(ctx context.Context, tasks map[string]*config.Task) map[string]any {
 	return map[string]any{
 		// Remove Command for security
 		// "Command": NewCommand(ctx, nil, dir, envs).Run,
-		"Task": NewTask(ctx, tasks, dir, envs).Run,
+		"Task": NewTask(ctx, tasks).Run,
 	}
 }

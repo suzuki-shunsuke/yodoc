@@ -26,6 +26,7 @@ type Renderer interface {
 	Render(ctx context.Context, src, dest string) error
 	SetDelims(left, right string)
 	SetTasks(tasks map[string]*config.Task)
+	GetActionEnv(action *config.Action) ([]string, error)
 }
 
 func NewController(fs afero.Fs, configFinder ConfigFinder, configReader ConfigReader, renderer Renderer) *Controller {

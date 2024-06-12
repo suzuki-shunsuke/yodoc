@@ -12,39 +12,31 @@ import (
 type Task struct {
 	ctx   context.Context //nolint:containedctx
 	tasks map[string]*config.Task
-	dir   string
-	envs  []string
 }
 
-func NewTask(ctx context.Context, tasks map[string]*config.Task, dir string, envs []string) *Task {
+func NewTask(ctx context.Context, tasks map[string]*config.Task) *Task {
 	return &Task{
 		ctx:   ctx,
 		tasks: tasks,
-		dir:   dir,
-		envs:  envs,
 	}
 }
 
-func (t *Task) run(act *config.Action) (*CommandResult, error) {
-	envs := t.envs
-	if len(act.Env) != 0 {
-		envs = append(envs, act.GetEnv()...)
-	}
-	c := NewCommand(t.ctx, act.Shell, act.GetDir(), envs)
+func (t *Task) run(act *config.Action) *CommandResult {
+	c := NewCommand(t.ctx, act.Shell, act.GetDir(), act.GetEnv())
 	if act.Run != "" {
-		return c.Run(act.Run), nil
+		return c.Run(act.Run)
 	}
 	shell := act.Shell
 	if shell == nil {
 		shell = []string{"sh"}
 	}
-	c.Shell = shell
+	c.shell = shell
 	result := c.Run(act.ScriptPath)
 	result.Command = act.GetScript()
-	return result, nil
+	return result
 }
 
-func (t *Task) Check(cr *CommandResult, check *config.Check, task *config.Task) error {
+func (t *Task) Check(cr *CommandResult, check *config.Check) error {
 	prog := check.GetExpr()
 	output, err := expr.Run(prog, cr)
 	if err != nil {
@@ -60,6 +52,28 @@ func (t *Task) Check(cr *CommandResult, check *config.Check, task *config.Task) 
 	return errors.New("a check is false")
 }
 
+func (t *Task) before(before *config.Action) error {
+	cr := t.run(before)
+	if cr.RunError != nil {
+		return cr.RunError
+	}
+	if cr.ExitCode != 0 {
+		return errors.New("command failed")
+	}
+	return nil
+}
+
+func (t *Task) after(after *config.Action) error {
+	cr := t.run(after)
+	if cr.RunError != nil {
+		return cr.RunError
+	}
+	if cr.ExitCode != 0 {
+		return errors.New("command failed")
+	}
+	return nil
+}
+
 func (t *Task) Run(taskName string) (*CommandResult, error) {
 	task, ok := t.tasks[taskName]
 	if !ok {
@@ -67,35 +81,24 @@ func (t *Task) Run(taskName string) (*CommandResult, error) {
 	}
 
 	if task.Before != nil {
-		if cr, err := t.run(task.Before); err != nil {
+		if err := t.before(task.Before); err != nil {
 			return nil, err
-		} else if cr.RunError != nil {
-			return cr, cr.RunError
-		} else if cr.ExitCode != 0 {
-			return cr, errors.New("command failed")
 		}
 	}
 
-	cr, err := t.run(task.Action)
-	if err != nil {
-		return nil, err
-	}
+	cr := t.run(task.Action)
 	if cr.RunError != nil {
 		return cr, cr.RunError
 	}
 
 	if task.After != nil {
-		if cr, err := t.run(task.After); err != nil {
+		if err := t.after(task.After); err != nil {
 			return nil, err
-		} else if cr.RunError != nil {
-			return cr, cr.RunError
-		} else if cr.ExitCode != 0 {
-			return cr, errors.New("command failed")
 		}
 	}
 
 	for _, check := range task.Checks {
-		if err := t.Check(cr, check, task); err != nil {
+		if err := t.Check(cr, check); err != nil {
 			return nil, err
 		}
 	}

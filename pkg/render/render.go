@@ -1,27 +1,39 @@
 package render
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
 )
 
 type Renderer struct {
-	fs         afero.Fs
-	funcs      map[string]any
-	leftDelim  string
-	rightDelim string
-	tasks      map[string]*config.Task
-	dir        string
-	envs       []string
+	fs           afero.Fs
+	leftDelim    string
+	rightDelim   string
+	tasks        map[string]*config.Task
+	funcs        map[string]any
+	funcsWithEnv map[string]any
 }
 
 func NewRenderer(fs afero.Fs) *Renderer {
+	fncs := sprig.TxtFuncMap()
+	delete(fncs, "env")
+	delete(fncs, "expandenv")
+	delete(fncs, "getHostByName")
+
+	fncsWithEnv := sprig.TxtFuncMap()
+	delete(fncsWithEnv, "expandenv")
+	delete(fncsWithEnv, "getHostByName")
+
 	return &Renderer{
-		fs: fs,
+		fs:           fs,
+		funcs:        fncs,
+		funcsWithEnv: fncsWithEnv,
 	}
 }
 
@@ -41,12 +53,39 @@ func (r *Renderer) SetTasks(tasks map[string]*config.Task) {
 	r.tasks = tasks
 }
 
-func (r *Renderer) SetDir(dir string) {
-	r.dir = dir
+func (r *Renderer) GetActionEnv(action *config.Action) ([]string, error) {
+	if action == nil || len(action.Env) == 0 {
+		return nil, nil
+	}
+	envs := make([]string, 0, len(action.Env))
+	for k, v := range action.Env {
+		e, err := r.renderEnv(v)
+		if err != nil {
+			return nil, fmt.Errorf("render an environment variable: %w", err)
+		}
+		envs = append(envs, k+"="+e)
+	}
+	return envs, nil
 }
 
-func (r *Renderer) SetEnvs(envs []string) {
-	r.envs = envs
+func (r *Renderer) renderEnv(v string) (string, error) {
+	tpl, err := r.NewTemplateWithEnv().Parse(v)
+	if err != nil {
+		return "", fmt.Errorf("parse a template: %w", err)
+	}
+	buf := &bytes.Buffer{}
+	if err := tpl.Execute(buf, nil); err != nil {
+		return "", fmt.Errorf("evaluate an environment: %w", err)
+	}
+	return buf.String(), nil
+}
+
+func (r *Renderer) NewTemplate() *template.Template {
+	return template.New("_").Funcs(r.funcs)
+}
+
+func (r *Renderer) NewTemplateWithEnv() *template.Template {
+	return template.New("_").Funcs(r.funcsWithEnv)
 }
 
 func (r *Renderer) Render(ctx context.Context, src, dest string) error {
@@ -65,7 +104,7 @@ func (r *Renderer) Render(ctx context.Context, src, dest string) error {
 		return fmt.Errorf("write a dest file: %w", err)
 	}
 
-	tpl, err := template.New("_").Funcs(Funcs(ctx, r.tasks, r.dir, r.envs)).Parse(string(srcByte))
+	tpl, err := r.NewTemplate().Funcs(Funcs(ctx, r.tasks)).Parse(string(srcByte))
 	if err != nil {
 		return fmt.Errorf("parse a template: %w", err)
 	}

@@ -18,24 +18,25 @@ type CommandResult struct {
 
 type Command struct {
 	ctx   context.Context //nolint:containedctx
-	Shell []string
+	shell []string
 	dir   string
 	envs  []string
 }
 
 func NewCommand(ctx context.Context, shell []string, dir string, envs []string) *Command {
 	return &Command{
-		ctx:  ctx,
-		dir:  dir,
-		envs: envs,
+		ctx:   ctx,
+		shell: shell,
+		dir:   dir,
+		envs:  envs,
 	}
 }
 
 func (c *Command) Run(s string) *CommandResult {
-	if c.Shell == nil {
-		c.Shell = []string{"sh", "-c"}
+	if len(c.shell) == 0 {
+		c.shell = []string{"sh", "-c"}
 	}
-	cmd := exec.CommandContext(c.ctx, c.Shell[0], append(c.Shell[1:], s)...)
+	cmd := exec.CommandContext(c.ctx, c.shell[0], append(c.shell[1:], s)...) //nolint:gosec
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	combinedOutput := &bytes.Buffer{}
@@ -61,17 +62,4 @@ func (c *Command) Run(s string) *CommandResult {
 		CombinedOutput: combinedOutput.String(),
 		ExitCode:       cmd.ProcessState.ExitCode(),
 	}
-}
-
-func envs(envs, appendEnvs []string, environ func() []string) []string {
-	if envs == nil {
-		if len(appendEnvs) == 0 {
-			return nil
-		}
-		return append(environ(), appendEnvs...)
-	}
-	if len(appendEnvs) == 0 {
-		return envs
-	}
-	return append(envs, appendEnvs...)
 }

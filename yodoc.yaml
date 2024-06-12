@@ -6,12 +6,10 @@ dest: dest
 tasks:
   - name: gh version
     action:
-      run: |
-        echo "$FOO"
-        pwd
-      dir: src
+      run: pwd
+      # dir: src
       # script: gh_version.sh
       env:
-        FOO: foo
-    checks:
-      - expr: ExitCode != 0
+        FOO: '{{ env "USER" }}'
+    # checks:
+    #   - expr: ExitCode != 0
