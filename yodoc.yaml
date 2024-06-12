@@ -1,5 +1,15 @@
+---
+# yodoc
+# https://github.com/suzuki-shunsuke/yodoc
+src: src
+dest: dest
 tasks:
-  - name: yodoc version
-    command: yodoc -v
-    checks:
-      - exit_code: 0
+  - name: gh version
+    action:
+      run: pwd
+      # dir: src
+      # script: gh_version.sh
+      env:
+        FOO: '{{ env "USER" }}'
+    # checks:
+    #   - expr: ExitCode != 0
