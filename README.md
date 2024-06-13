@@ -157,7 +157,18 @@ But the following functions are unavailable for security reason.
 
 Furthermore, some custom functions are available.
 
-- `Task`
+- `Read`: Read a file
+- `Task`: Execute a task
+
+#### Read
+
+```
+{{Read "foo.yaml"}}
+```
+
+`Read` takes one argument, which is a file path to read.
+The file path is a relative path from the template file.
+`Read` returns a string which is the file content.
 
 #### Task
 
