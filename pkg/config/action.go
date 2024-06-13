@@ -44,8 +44,12 @@ func (a *Action) SetDir(dir string) {
 	if a == nil {
 		return
 	}
-	a.dir = filepath.Join(dir, a.Dir)
-	a.ScriptPath = filepath.Join(dir, a.Script)
+	if a.dir != "" {
+		a.dir = filepath.Join(dir, a.Dir)
+	}
+	if a.Script != "" {
+		a.ScriptPath = filepath.Join(dir, a.Script)
+	}
 }
 
 func (a *Action) GetDir() string {

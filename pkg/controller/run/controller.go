@@ -2,9 +2,11 @@ package run
 
 import (
 	"context"
+	"text/template"
 
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
+	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 )
 
 type Controller struct {
@@ -23,7 +25,8 @@ type ConfigReader interface {
 }
 
 type Renderer interface {
-	Render(ctx context.Context, src, dest string) error
+	Render(ctx context.Context, src, dest, txt string, fm *frontmatter.Frontmatter) error
+	NewTemplate() *template.Template
 	SetDelims(left, right string)
 	SetTasks(tasks map[string]*config.Task)
 	GetActionEnv(action *config.Action) ([]string, error)

@@ -51,8 +51,12 @@ func (c *Command) Run(s string) *CommandResult {
 
 	if err := cmd.Run(); err != nil {
 		return &CommandResult{
-			Command:  s,
-			RunError: err,
+			Command:        s,
+			Stdout:         stdout.String(),
+			Stderr:         stderr.String(),
+			CombinedOutput: combinedOutput.String(),
+			ExitCode:       cmd.ProcessState.ExitCode(),
+			RunError:       err,
 		}
 	}
 	return &CommandResult{

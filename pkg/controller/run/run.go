@@ -1,6 +1,7 @@
 package run
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
+	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 	"github.com/suzuki-shunsuke/yodoc/pkg/osfile"
 	"github.com/suzuki-shunsuke/yodoc/pkg/render"
 )
@@ -47,7 +49,7 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) err
 	}
 
 	for _, file := range files {
-		if err := c.handleTemplate(ctx, renderer, src, dest, file); err != nil {
+		if err := c.handleTemplate(ctx, renderer, src, dest, file, cfgPath); err != nil {
 			return err
 		}
 	}
@@ -120,7 +122,10 @@ func (c *Controller) findTemplates(src string, isSameDir bool) ([]string, error)
 	return files, nil
 }
 
-func (c *Controller) getDest(src, dest, file string) (string, error) {
+func (c *Controller) getDest(src, dest, file string, fm *frontmatter.Frontmatter) (string, error) {
+	if fm != nil && fm.Dest != "" {
+		return filepath.Join(filepath.Dir(src), fm.Dest), nil
+	}
 	if src == dest {
 		if s := strings.TrimSuffix(file, "_yodoc.md"); s != file {
 			return s + ".md", nil
@@ -143,13 +148,39 @@ func (c *Controller) getDest(src, dest, file string) (string, error) {
 	return dest, nil
 }
 
-func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src, dest, file string) error {
-	dest, err := c.getDest(src, dest, file)
+func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src, dest, file, cfgPath string) error {
+	b, err := afero.ReadFile(c.fs, file)
+	if err != nil {
+		return fmt.Errorf("read a template file: %w", err)
+	}
+	s := string(b)
+	fm, txt, err := frontmatter.Parse(s)
+	if err != nil {
+		return fmt.Errorf("parse frontmatter: %w", err)
+	}
+	dest, err = c.getDest(src, dest, file, fm)
 	if err != nil {
 		return err
 	}
+
+	if fm != nil && fm.Dir != "" {
+		tpl, err := renderer.NewTemplate().Parse(fm.Dir)
+		if err != nil {
+			return fmt.Errorf("parse front matter's dir: %w", err)
+		}
+		b := &bytes.Buffer{}
+		if err := tpl.Execute(b, map[string]any{
+			"SourceDir": filepath.Dir(file),
+			"DestDir":   filepath.Dir(dest),
+			"ConfigDir": filepath.Dir(cfgPath),
+		}); err != nil {
+			return fmt.Errorf("render front matter's dir: %w", err)
+		}
+		fm.Dir = b.String()
+	}
+
 	// render templates and update documents
-	if err := renderer.Render(ctx, file, dest); err != nil {
+	if err := renderer.Render(ctx, file, dest, txt, fm); err != nil {
 		return fmt.Errorf("render a file: %w", err)
 	}
 	return nil
