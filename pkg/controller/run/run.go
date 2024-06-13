@@ -41,7 +41,7 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) err
 	}
 
 	// find templates
-	files, err := c.findTemplates(src)
+	files, err := c.findTemplates(src, cfg.Src == cfg.Dest)
 	if err != nil {
 		return err
 	}
@@ -93,13 +93,17 @@ func (c *Controller) setTasks(tasks map[string]*config.Task, cfg *config.Config,
 	return nil
 }
 
-func (c *Controller) findTemplates(src string) ([]string, error) {
+func (c *Controller) findTemplates(src string, isSameDir bool) ([]string, error) {
 	files := []string{}
 	if err := afero.Walk(c.fs, src, func(p string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if strings.HasSuffix(p, ".md") || strings.HasSuffix(p, ".mdx") {
+		if isSameDir {
+			if strings.HasSuffix(p, "_yodoc.md") || strings.HasSuffix(p, "_yodoc.mdx") {
+				files = append(files, p)
+			}
+		} else if strings.HasSuffix(p, ".md") || strings.HasSuffix(p, ".mdx") {
 			files = append(files, p)
 		}
 		return nil
@@ -109,16 +113,33 @@ func (c *Controller) findTemplates(src string) ([]string, error) {
 	return files, nil
 }
 
-func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src, dest, file string) error {
+func (c *Controller) getDest(src, dest, file string) (string, error) {
+	if src == dest {
+		if s := strings.TrimSuffix(file, "_yodoc.md"); s != file {
+			return s + ".md", nil
+		}
+		if s := strings.TrimSuffix(file, "_yodoc.mdx"); s != file {
+			return s + ".mdx", nil
+		}
+		return "", errors.New("the file name must end with _yodoc.md or _yodoc.mdx")
+	}
 	rel, err := filepath.Rel(src, file)
 	if err != nil {
-		return fmt.Errorf("get a relative path: %w", err)
+		return "", fmt.Errorf("get a relative path: %w", err)
 	}
 	dest = filepath.Join(dest, rel)
 	if a, err := filepath.Rel(src, dest); err != nil {
-		return fmt.Errorf("get a relative path: %w", err)
+		return "", fmt.Errorf("get a relative path: %w", err)
 	} else if !strings.HasPrefix(a, "..") {
-		return errors.New("dest must not include in source directory")
+		return "", errors.New("dest must not include in source directory")
+	}
+	return dest, nil
+}
+
+func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src, dest, file string) error {
+	dest, err := c.getDest(src, dest, file)
+	if err != nil {
+		return err
 	}
 	// render templates and update documents
 	if err := renderer.Render(ctx, file, dest); err != nil {
