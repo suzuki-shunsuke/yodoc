@@ -100,7 +100,7 @@ func (r *Renderer) Render(ctx context.Context, src, dest string) error {
 	}
 	defer destFile.Close()
 
-	tpl, err := r.NewTemplate().Funcs(Funcs(ctx, r.tasks)).Parse(string(srcByte))
+	tpl, err := r.NewTemplate().Funcs(Funcs(ctx, r.fs, r.tasks, src)).Parse(string(srcByte))
 	if err != nil {
 		return fmt.Errorf("parse a template: %w", err)
 	}
