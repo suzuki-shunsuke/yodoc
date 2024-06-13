@@ -95,9 +95,16 @@ func (c *Controller) setTasks(tasks map[string]*config.Task, cfg *config.Config,
 
 func (c *Controller) findTemplates(src string, isSameDir bool) ([]string, error) {
 	files := []string{}
-	if err := afero.Walk(c.fs, src, func(p string, _ os.FileInfo, err error) error {
+	ignoreDirs := map[string]struct{}{
+		"node_modules": {},
+		".git":         {},
+	}
+	if err := afero.Walk(c.fs, src, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+		if _, ok := ignoreDirs[info.Name()]; ok {
+			return filepath.SkipDir
 		}
 		if isSameDir {
 			if strings.HasSuffix(p, "_yodoc.md") || strings.HasSuffix(p, "_yodoc.mdx") {
