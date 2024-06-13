@@ -87,6 +87,8 @@ tasks:
 yodoc searches template files from `src`, and generates documents in `dest`.
 The file extension must be either `.md` or `.mdx`.
 
+yodoc ignores directories `.git` and `node_modules`.
+
 If `src` and `dest` are same, template file names must end with `_yodoc.md` or `_yodoc.mdx`, then yodoc generates `.md` or `.mdx`.
 
 - `README_yodoc.md` => `README.md`

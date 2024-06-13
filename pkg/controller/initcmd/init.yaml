@@ -1,8 +1,23 @@
 ---
 # yodoc
 # https://github.com/suzuki-shunsuke/yodoc
+src: .
+dest: .
+delim:
+  left: "{{"
+  right: "}}"
 tasks:
   - name: yodoc version
-    command: yodoc -v
+    action:
+      # shell: ["sh", "-c"]
+      # script: yodoc_version.sh
+      # dir: foo
+      # env:
+      #   FOO: '{{ env "FOO" }}'
+      command: yodoc -v
+    before:
+      command: yodoc -v
+    after:
+      command: yodoc -v
     checks:
-      - exit_code: 0
+      - expr: ExitCode == 0
