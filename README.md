@@ -153,6 +153,34 @@ All checks must be true, otherwise the task fails.
 
 Template files are renderered by Go's [text/template](https://pkg.go.dev/text/template).
 
+### Front matter
+
+You can write [YAML Front matter](https://jekyllrb.com/docs/front-matter/) in the top of templates.
+
+```md
+---
+dir: "{{.SourceDir}}"
+dest: README.md
+delim:
+  left: "[["
+  right: "]]"
+---
+```
+
+Front matters are removed from generated document.
+Front matter supports the following fields.
+
+- `dir`
+- `dest`
+- `delim`
+
+`dir` is renderered by Go's [text/template](https://pkg.go.dev/text/template).
+The following variables are available.
+
+- `SourceDir`: a directory where a template file exists
+- `DestDir`: a directory where a file is generated
+- `ConfigDir`: a directory where a configuration file exists
+
 ### Template functions
 
 [sprig functions](https://masterminds.github.io/sprig/) are available.
