@@ -9,6 +9,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
+	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 )
 
 type Renderer struct {
@@ -88,24 +89,21 @@ func (r *Renderer) NewTemplateWithEnv() *template.Template {
 	return template.New("_").Funcs(r.funcsWithEnv)
 }
 
-func (r *Renderer) Render(ctx context.Context, src, dest string) error {
-	srcByte, err := afero.ReadFile(r.fs, src)
-	if err != nil {
-		return fmt.Errorf("open a template file: %w", err)
-	}
-
+func (r *Renderer) Render(ctx context.Context, src, dest, txt string, fm *frontmatter.Frontmatter) error {
 	destFile, err := r.fs.Create(dest)
 	if err != nil {
 		return fmt.Errorf("create a dest file: %w", err)
 	}
 	defer destFile.Close()
 
-	tpl, err := r.NewTemplate().Funcs(Funcs(ctx, r.fs, r.tasks, src)).Parse(string(srcByte))
+	tpl := r.NewTemplate().Funcs(Funcs(ctx, r.fs, r.tasks, src, fm))
+
+	r.setDelim(tpl, fm)
+
+	tpl, err = tpl.Parse(txt)
 	if err != nil {
 		return fmt.Errorf("parse a template: %w", err)
 	}
-
-	tpl.Delims(r.leftDelim, r.rightDelim)
 
 	if err := tpl.Execute(destFile, nil); err != nil {
 		return fmt.Errorf("execute a template: %w", err)
@@ -116,4 +114,18 @@ func (r *Renderer) Render(ctx context.Context, src, dest string) error {
 	}
 
 	return nil
+}
+
+func (r *Renderer) setDelim(tpl *template.Template, fm *frontmatter.Frontmatter) {
+	leftDelim := r.leftDelim
+	rightDelim := r.rightDelim
+	if fm != nil && fm.Delim != nil {
+		if fm.Delim.Left != "" {
+			leftDelim = fm.Delim.Left
+		}
+		if fm.Delim.Right != "" {
+			leftDelim = fm.Delim.Right
+		}
+	}
+	tpl.Delims(leftDelim, rightDelim)
 }

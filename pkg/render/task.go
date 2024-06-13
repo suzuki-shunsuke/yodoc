@@ -7,22 +7,32 @@ import (
 
 	"github.com/expr-lang/expr"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
+	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 )
 
 type Task struct {
 	ctx   context.Context //nolint:containedctx
 	tasks map[string]*config.Task
+	fm    *frontmatter.Frontmatter
 }
 
-func NewTask(ctx context.Context, tasks map[string]*config.Task) *Task {
+func NewTask(ctx context.Context, tasks map[string]*config.Task, fm *frontmatter.Frontmatter) *Task {
 	return &Task{
 		ctx:   ctx,
 		tasks: tasks,
+		fm:    fm,
 	}
 }
 
 func (t *Task) run(act *config.Action) *CommandResult {
-	c := NewCommand(t.ctx, act.Shell, act.GetDir(), act.GetEnv())
+	if t == nil {
+		return nil
+	}
+	dir := act.GetDir()
+	if dir == "" && t.fm != nil {
+		dir = t.fm.Dir
+	}
+	c := NewCommand(t.ctx, act.Shell, dir, act.GetEnv())
 	if act.Run != "" {
 		return c.Run(act.Run)
 	}
@@ -87,9 +97,6 @@ func (t *Task) Run(taskName string) (*CommandResult, error) {
 	}
 
 	cr := t.run(task.Action)
-	if cr.RunError != nil {
-		return cr, cr.RunError
-	}
 
 	if task.After != nil {
 		if err := t.after(task.After); err != nil {
