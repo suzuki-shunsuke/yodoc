@@ -6,15 +6,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/expr-lang/expr"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
 	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 	"github.com/suzuki-shunsuke/yodoc/pkg/osfile"
+	"github.com/suzuki-shunsuke/yodoc/pkg/parser"
 	"github.com/suzuki-shunsuke/yodoc/pkg/render"
+	"gopkg.in/yaml.v3"
 )
 
 type Param struct {
@@ -179,10 +183,62 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 		fm.Dir = b.String()
 	}
 
-	// render templates and update documents
-	if err := renderer.Render(ctx, file, dest, txt, fm); err != nil {
-		return fmt.Errorf("render a file: %w", err)
+	r := strings.NewReader(txt)
+	p := &parser.Parser{}
+	blocks, err := p.Parse(r)
+	if err != nil {
+		return err
 	}
+	texts := make([]string, 0, len(blocks))
+	result := &render.CommandResult{}
+	for _, block := range blocks {
+		switch block.Kind {
+		case parser.HiddenBlock:
+			cmd := exec.CommandContext(ctx, "sh", "-c", strings.Join(block.Lines[1:len(block.Lines)-1], "\n"))
+			if err := cmd.Run(); err != nil {
+				return err
+			}
+			cmd.Dir = fm.Dir
+		case parser.MainBlock:
+			texts = append(texts, strings.Join(block.Lines, "\n"))
+			cmd := render.NewCommand(ctx, []string{"sh", "-c"}, fm.Dir, nil)
+			s := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
+			result = cmd.Run(s)
+		case parser.CheckBlock:
+			checks := []*config.Check{}
+			if err := yaml.Unmarshal([]byte(strings.Join(block.Lines[1:len(block.Lines)-1], "\n")), &checks); err != nil {
+				return err
+			}
+			for _, check := range checks {
+				if err := check.Build(); err != nil {
+					return err
+				}
+				prog := check.GetExpr()
+				output, err := expr.Run(prog, result)
+				if err != nil {
+					return fmt.Errorf("evaluate an expression: %w", err)
+				}
+				b, ok := output.(bool)
+				if !ok {
+					return errors.New("the result of the expression isn't a boolean value")
+				}
+				if !b {
+					return errors.New("a check is false")
+				}
+			}
+		case parser.OtherBlock:
+			texts = append(texts, strings.Join(block.Lines, "\n"))
+		case parser.OutBlock:
+			texts = append(texts, strings.Join(block.Lines, "\n"))
+		default:
+			return fmt.Errorf("unknown block kind: %v", block.Kind)
+		}
+	}
+
+	if err := afero.WriteFile(c.fs, dest, []byte(strings.Join(texts, "\n")+render.Footer), 0o644); err != nil { //nolint:mnd
+		return err
+	}
+
 	return nil
 }
 
