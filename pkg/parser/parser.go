@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -40,30 +41,28 @@ func (p *Parser) Parse(r io.Reader) ([]*Block, error) {
 	}
 
 	for scanner.Scan() {
-		if err := p.parse(scanner.Text(), state); err != nil {
-			return nil, err
-		}
+		p.parse(scanner.Text(), state)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("scan a template file: %w", err)
 	}
 	return append(state.Blocks, state.Current), nil
 }
 
-func (p *Parser) parse(line string, state *State) error {
+func (p *Parser) parse(line string, state *State) {
 	// #-yodoc hidden
 	// ```
 	// #-yodoc run
 	// #-yodoc #
 	// #-yodoc checks
-	// #-yodoc read
+	// #-yodoc dir
 	if strings.HasPrefix(line, "#-yodoc # ") {
-		return nil
+		return
 	}
 	if strings.HasPrefix(line, "#-yodoc dir ") {
 		state.Current.Dir = strings.TrimPrefix(line, "#-yodoc dir ")
-		return nil
+		return
 	}
 	if strings.HasPrefix(line, "```") {
 		state.Blocks = append(state.Blocks, state.Current)
@@ -72,7 +71,7 @@ func (p *Parser) parse(line string, state *State) error {
 			state.Current = &Block{
 				Lines: []string{line},
 			}
-			return nil
+			return
 		}
 		if state.Current.Kind == UnknownBlock {
 			state.Current.Kind = OtherBlock
@@ -82,20 +81,20 @@ func (p *Parser) parse(line string, state *State) error {
 		state.Current = &Block{
 			Kind: OutBlock,
 		}
-		return nil
+		return
 	}
 	switch {
 	case strings.HasPrefix(line, "#-yodoc hidden"):
 		state.Current.Kind = HiddenBlock
-		return nil
+		return
 	case strings.HasPrefix(line, "#-yodoc run"):
 		state.Current.Kind = MainBlock
-		return nil
+		return
 	case strings.HasPrefix(line, "#-yodoc checks"):
 		state.Current.Kind = CheckBlock
-		return nil
+		return
 	default:
 		state.Current.Lines = append(state.Current.Lines, line)
-		return nil
+		return
 	}
 }

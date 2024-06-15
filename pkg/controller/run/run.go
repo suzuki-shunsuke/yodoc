@@ -152,7 +152,7 @@ func (c *Controller) getDest(src, dest, file string, fm *frontmatter.Frontmatter
 	return dest, nil
 }
 
-func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src, dest, file, cfgPath string) error {
+func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src, dest, file, cfgPath string) error { //nolint:cyclop
 	b, err := afero.ReadFile(c.fs, file)
 	if err != nil {
 		return fmt.Errorf("read a template file: %w", err)
@@ -168,93 +168,127 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 	}
 
 	if fm != nil && fm.Dir != "" {
-		tpl, err := renderer.NewTemplate().Parse(fm.Dir)
-		if err != nil {
-			return fmt.Errorf("parse front matter's dir: %w", err)
+		if err := c.setFormatterDir(renderer, fm, file, dest, cfgPath); err != nil {
+			return err
 		}
-		b := &bytes.Buffer{}
-		if err := tpl.Execute(b, map[string]any{
-			"SourceDir": filepath.Dir(file),
-			"DestDir":   filepath.Dir(dest),
-			"ConfigDir": filepath.Dir(cfgPath),
-		}); err != nil {
-			return fmt.Errorf("render front matter's dir: %w", err)
-		}
-		fm.Dir = b.String()
 	}
 
 	r := strings.NewReader(txt)
 	p := &parser.Parser{}
 	blocks, err := p.Parse(r)
 	if err != nil {
-		return err
+		return fmt.Errorf("parse a template: %w", err)
 	}
 	texts := make([]string, 0, len(blocks))
 	result := &render.CommandResult{}
 	for _, block := range blocks {
-		switch block.Kind {
-		case parser.HiddenBlock:
-			txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
-			cmd := exec.CommandContext(ctx, "sh", "-c", txt)
-			combinedOutput := &bytes.Buffer{}
-			cmd.Stdout = combinedOutput
-			cmd.Stderr = combinedOutput
-			cmd.Dir = filepath.Join(fm.Dir, block.Dir)
-			if err := cmd.Run(); err != nil {
-				fmt.Fprintln(os.Stderr, "[ERROR] Hidden command failed", "\n", txt, "\n", combinedOutput.String())
-				return err
-			}
-		case parser.MainBlock:
-			cmd := render.NewCommand(ctx, []string{"sh", "-c"}, filepath.Join(fm.Dir, block.Dir), nil)
-			s := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
-			result = cmd.Run(s)
-			txt := strings.Join(block.Lines, "\n")
-			txt, err := c.render(ctx, renderer, file, fm, txt, result)
-			if err != nil {
-				return err
-			}
-			texts = append(texts, txt)
-		case parser.CheckBlock:
-			checks := struct {
-				Checks []*config.Check
-			}{}
-			txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
-			if err := yaml.Unmarshal([]byte(txt), &checks); err != nil {
-				return err
-			}
-			for _, check := range checks.Checks {
-				if err := c.check(check, result); err != nil {
-					fmt.Fprintln(os.Stderr, "[ERROR] Check failed", "\n", result.Command, "\n", check.Expr, "\n", err.Error())
-					return err
-				}
-			}
-		case parser.OtherBlock:
-			txt, err := c.render(ctx, renderer, file, fm, strings.Join(block.Lines, "\n"), result)
-			if err != nil {
-				return err
-			}
-			texts = append(texts, txt)
-		case parser.OutBlock:
-			txt, err := c.render(ctx, renderer, file, fm, strings.Join(block.Lines, "\n"), result)
-			if err != nil {
-				return err
-			}
-			texts = append(texts, txt)
-		default:
-			return fmt.Errorf("unknown block kind: %v", block.Kind)
+		a, txt, err := c.handleBlock(ctx, renderer, fm, file, block, result)
+		if err != nil {
+			return err
 		}
+		if txt != "" {
+			texts = append(texts, txt)
+		}
+		result = a
 	}
 
 	if err := afero.WriteFile(c.fs, dest, []byte(strings.Join(texts, "\n")+render.Footer), 0o644); err != nil { //nolint:mnd
-		return err
+		return fmt.Errorf("write a document: %w", err)
 	}
 
 	return nil
 }
 
+func (c *Controller) handleHiddenBlock(ctx context.Context, fm *frontmatter.Frontmatter, block *parser.Block) error {
+	txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
+	cmd := exec.CommandContext(ctx, "sh", "-c", txt)
+	combinedOutput := &bytes.Buffer{}
+	cmd.Stdout = combinedOutput
+	cmd.Stderr = combinedOutput
+	cmd.Dir = filepath.Join(fm.Dir, block.Dir)
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, "[ERROR] Hidden command failed", "\n", txt, "\n", combinedOutput.String())
+		return fmt.Errorf("execute a hidden block: %w", err)
+	}
+	return nil
+}
+
+func (c *Controller) handleMainBlock(ctx context.Context, renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block) (*render.CommandResult, string, error) {
+	cmd := render.NewCommand(ctx, []string{"sh", "-c"}, filepath.Join(fm.Dir, block.Dir), nil)
+	s := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
+	result := cmd.Run(s)
+	txt := strings.Join(block.Lines, "\n")
+	txt, err := c.render(renderer, file, fm, txt, result)
+	if err != nil {
+		return result, "", err
+	}
+	return result, txt, nil
+}
+
+func (c *Controller) handleCheckBlock(block *parser.Block, result *render.CommandResult) error {
+	checks := struct {
+		Checks []*config.Check
+	}{}
+	txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
+	if err := yaml.Unmarshal([]byte(txt), &checks); err != nil {
+		return fmt.Errorf("unmarshal a checks block as YAML: %w", err)
+	}
+	for _, check := range checks.Checks {
+		if err := c.check(check, result); err != nil {
+			fmt.Fprintln(os.Stderr, "[ERROR] Check failed", "\n", result.Command, "\n", check.Expr, "\n", err.Error())
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Controller) handleOtherBlock(renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block, result *render.CommandResult) (string, error) {
+	return c.render(renderer, file, fm, strings.Join(block.Lines, "\n"), result)
+}
+
+func (c *Controller) handleOutBlock(renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block, result *render.CommandResult) (string, error) {
+	return c.render(renderer, file, fm, strings.Join(block.Lines, "\n"), result)
+}
+
+func (c *Controller) handleBlock(ctx context.Context, renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block, result *render.CommandResult) (*render.CommandResult, string, error) {
+	switch block.Kind {
+	case parser.HiddenBlock:
+		return result, "", c.handleHiddenBlock(ctx, fm, block)
+	case parser.MainBlock:
+		return c.handleMainBlock(ctx, renderer, fm, file, block)
+	case parser.CheckBlock:
+		return result, "", c.handleCheckBlock(block, result)
+	case parser.OtherBlock:
+		txt, err := c.handleOtherBlock(renderer, fm, file, block, result)
+		return result, txt, err
+	case parser.OutBlock:
+		txt, err := c.handleOutBlock(renderer, fm, file, block, result)
+		return result, txt, err
+	default:
+		return result, "", fmt.Errorf("unknown block kind: %v", block.Kind)
+	}
+}
+
+func (c *Controller) setFormatterDir(renderer Renderer, fm *frontmatter.Frontmatter, file, dest, cfgPath string) error {
+	tpl, err := renderer.NewTemplate().Parse(fm.Dir)
+	if err != nil {
+		return fmt.Errorf("parse front matter's dir: %w", err)
+	}
+	b := &bytes.Buffer{}
+	if err := tpl.Execute(b, map[string]any{
+		"SourceDir": filepath.Dir(file),
+		"DestDir":   filepath.Dir(dest),
+		"ConfigDir": filepath.Dir(cfgPath),
+	}); err != nil {
+		return fmt.Errorf("render front matter's dir: %w", err)
+	}
+	fm.Dir = b.String()
+	return nil
+}
+
 func (c *Controller) check(check *config.Check, result *render.CommandResult) error {
 	if err := check.Build(); err != nil {
-		return err
+		return fmt.Errorf("build a check: %w", err)
 	}
 	prog := check.GetExpr()
 	output, err := expr.Run(prog, result)
@@ -271,16 +305,16 @@ func (c *Controller) check(check *config.Check, result *render.CommandResult) er
 	return nil
 }
 
-func (c *Controller) render(ctx context.Context, renderer Renderer, file string, fm *frontmatter.Frontmatter, txt string, result *render.CommandResult) (string, error) {
-	tpl := renderer.NewTemplate().Funcs(render.Funcs(ctx, c.fs, file, fm))
+func (c *Controller) render(renderer Renderer, file string, fm *frontmatter.Frontmatter, txt string, result *render.CommandResult) (string, error) {
+	tpl := renderer.NewTemplate().Funcs(render.Funcs(c.fs, file))
 	tpl.Delims(fm.Delim.GetLeft(), fm.Delim.GetRight())
 	tpl, err := tpl.Parse(txt)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("parse a template: %w", err)
 	}
 	buf := &bytes.Buffer{}
 	if err := tpl.Execute(buf, result); err != nil {
-		return "", err
+		return "", fmt.Errorf("render a template: %w", err)
 	}
 	return buf.String(), nil
 }

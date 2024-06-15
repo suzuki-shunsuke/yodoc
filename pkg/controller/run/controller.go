@@ -1,7 +1,6 @@
 package run
 
 import (
-	"context"
 	"text/template"
 
 	"github.com/spf13/afero"
@@ -25,7 +24,7 @@ type ConfigReader interface {
 }
 
 type Renderer interface {
-	Render(ctx context.Context, src, dest, txt string, fm *frontmatter.Frontmatter) error
+	Render(src, dest, txt string, fm *frontmatter.Frontmatter) error
 	NewTemplate() *template.Template
 	SetDelims(left, right string)
 	SetTasks(tasks map[string]*config.Task)

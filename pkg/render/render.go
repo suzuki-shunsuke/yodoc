@@ -2,7 +2,6 @@ package render
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"text/template"
 
@@ -90,14 +89,14 @@ func (r *Renderer) NewTemplateWithEnv() *template.Template {
 	return template.New("_").Funcs(r.funcsWithEnv)
 }
 
-func (r *Renderer) Render(ctx context.Context, src, dest, txt string, fm *frontmatter.Frontmatter) error {
+func (r *Renderer) Render(src, dest, txt string, fm *frontmatter.Frontmatter) error {
 	destFile, err := r.fs.Create(dest)
 	if err != nil {
 		return fmt.Errorf("create a dest file: %w", err)
 	}
 	defer destFile.Close()
 
-	tpl := r.NewTemplate().Funcs(Funcs(ctx, r.fs, src, fm))
+	tpl := r.NewTemplate().Funcs(Funcs(r.fs, src))
 
 	r.setDelim(tpl, fm)
 
