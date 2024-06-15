@@ -37,7 +37,7 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) err
 	dest := filepath.Join(filepath.Dir(cfgPath), cfg.Dest)
 
 	renderer := render.NewRenderer(c.fs)
-	if err := c.setRenderer(renderer, cfg, cfgPath); err != nil {
+	if err := c.setRenderer(renderer, cfg); err != nil {
 		return err
 	}
 
@@ -72,31 +72,6 @@ func (c *Controller) readConfig(cfgPath string, cfg *config.Config) (string, err
 		return "", fmt.Errorf("read a configuration file: %w", err)
 	}
 	return cfgPath, nil
-}
-
-func (c *Controller) setTasks(tasks map[string]*config.Task, cfg *config.Config, cfgPath string) error {
-	for _, task := range cfg.Tasks {
-		for _, check := range task.Checks {
-			if err := check.Build(); err != nil {
-				return fmt.Errorf("build a check: %w", err)
-			}
-		}
-
-		for _, action := range []*config.Action{task.Action, task.Before, task.After} {
-			env, err := c.renderer.GetActionEnv(action)
-			if err != nil {
-				return fmt.Errorf("evaluate an environment variable: %w", err)
-			}
-			action.SetEnv(env)
-		}
-
-		task.SetDir(filepath.Dir(cfgPath))
-		if err := task.ReadScript(c.fs); err != nil {
-			return err //nolint:wrapcheck
-		}
-		tasks[task.Name] = task
-	}
-	return nil
 }
 
 func (c *Controller) findTemplates(src string, isSameDir bool) ([]string, error) {
@@ -319,13 +294,7 @@ func (c *Controller) render(renderer Renderer, file string, fm *frontmatter.Fron
 	return buf.String(), nil
 }
 
-func (c *Controller) setRenderer(renderer Renderer, cfg *config.Config, cfgPath string) error {
-	tasks := make(map[string]*config.Task, len(cfg.Tasks))
-	if err := c.setTasks(tasks, cfg, cfgPath); err != nil {
-		return err
-	}
-
+func (c *Controller) setRenderer(renderer Renderer, cfg *config.Config) error {
 	renderer.SetDelims(cfg.Delim.GetLeft(), cfg.Delim.GetRight())
-	renderer.SetTasks(tasks)
 	return nil
 }

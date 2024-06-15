@@ -55,7 +55,7 @@ func (p *Parser) parse(line string, state *State) {
 	// ```
 	// #-yodoc run
 	// #-yodoc #
-	// #-yodoc checks
+	// #-yodoc check
 	// #-yodoc dir
 	if strings.HasPrefix(line, "#-yodoc # ") {
 		return
@@ -90,7 +90,7 @@ func (p *Parser) parse(line string, state *State) {
 	case strings.HasPrefix(line, "#-yodoc run"):
 		state.Current.Kind = MainBlock
 		return
-	case strings.HasPrefix(line, "#-yodoc checks"):
+	case strings.HasPrefix(line, "#-yodoc check"):
 		state.Current.Kind = CheckBlock
 		return
 	default:
