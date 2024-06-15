@@ -194,13 +194,18 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 	for _, block := range blocks {
 		switch block.Kind {
 		case parser.HiddenBlock:
-			cmd := exec.CommandContext(ctx, "sh", "-c", strings.Join(block.Lines[1:len(block.Lines)-1], "\n"))
+			txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
+			cmd := exec.CommandContext(ctx, "sh", "-c", txt)
+			combinedOutput := &bytes.Buffer{}
+			cmd.Stdout = combinedOutput
+			cmd.Stderr = combinedOutput
+			cmd.Dir = filepath.Join(fm.Dir, block.Dir)
 			if err := cmd.Run(); err != nil {
+				fmt.Fprintln(os.Stderr, "[ERROR] Hidden command failed", "\n", txt, "\n", combinedOutput.String())
 				return err
 			}
-			cmd.Dir = fm.Dir
 		case parser.MainBlock:
-			cmd := render.NewCommand(ctx, []string{"sh", "-c"}, fm.Dir, nil)
+			cmd := render.NewCommand(ctx, []string{"sh", "-c"}, filepath.Join(fm.Dir, block.Dir), nil)
 			s := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
 			result = cmd.Run(s)
 			txt := strings.Join(block.Lines, "\n")
@@ -213,24 +218,14 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 			checks := struct {
 				Checks []*config.Check
 			}{}
-			if err := yaml.Unmarshal([]byte(strings.Join(block.Lines[1:len(block.Lines)-1], "\n")), &checks); err != nil {
+			txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
+			if err := yaml.Unmarshal([]byte(txt), &checks); err != nil {
 				return err
 			}
 			for _, check := range checks.Checks {
-				if err := check.Build(); err != nil {
+				if err := c.check(check, result); err != nil {
+					fmt.Fprintln(os.Stderr, "[ERROR] Check failed", "\n", result.Command, "\n", check.Expr, "\n", err.Error())
 					return err
-				}
-				prog := check.GetExpr()
-				output, err := expr.Run(prog, result)
-				if err != nil {
-					return fmt.Errorf("evaluate an expression: %w", err)
-				}
-				b, ok := output.(bool)
-				if !ok {
-					return errors.New("the result of the expression isn't a boolean value")
-				}
-				if !b {
-					return errors.New("a check is false")
 				}
 			}
 		case parser.OtherBlock:
@@ -250,12 +245,29 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 		}
 	}
 
-	fmt.Println(dest)
-	fmt.Println(strings.Join(texts, "\n") + render.Footer)
 	if err := afero.WriteFile(c.fs, dest, []byte(strings.Join(texts, "\n")+render.Footer), 0o644); err != nil { //nolint:mnd
 		return err
 	}
 
+	return nil
+}
+
+func (c *Controller) check(check *config.Check, result *render.CommandResult) error {
+	if err := check.Build(); err != nil {
+		return err
+	}
+	prog := check.GetExpr()
+	output, err := expr.Run(prog, result)
+	if err != nil {
+		return fmt.Errorf("evaluate an expression: %w", err)
+	}
+	b, ok := output.(bool)
+	if !ok {
+		return errors.New("the result of the expression isn't a boolean value")
+	}
+	if !b {
+		return errors.New("a check is false")
+	}
 	return nil
 }
 

@@ -28,6 +28,7 @@ type Block struct {
 	Kind     Kind
 	Lines    []string
 	ReadFile string
+	Dir      string
 }
 
 func (p *Parser) Parse(r io.Reader) ([]*Block, error) {
@@ -58,6 +59,10 @@ func (p *Parser) parse(line string, state *State) error {
 	// #-yodoc checks
 	// #-yodoc read
 	if strings.HasPrefix(line, "#-yodoc # ") {
+		return nil
+	}
+	if strings.HasPrefix(line, "#-yodoc dir ") {
+		state.Current.Dir = strings.TrimPrefix(line, "#-yodoc dir ")
 		return nil
 	}
 	if strings.HasPrefix(line, "```") {
