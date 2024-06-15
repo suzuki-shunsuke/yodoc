@@ -16,7 +16,8 @@ type State struct {
 type Kind int
 
 const (
-	HiddenBlock Kind = iota
+	UnknownBlock Kind = iota
+	HiddenBlock
 	MainBlock
 	CheckBlock
 	OtherBlock
@@ -24,8 +25,9 @@ const (
 )
 
 type Block struct {
-	Kind  Kind
-	Lines []string
+	Kind     Kind
+	Lines    []string
+	ReadFile string
 }
 
 func (p *Parser) Parse(r io.Reader) ([]*Block, error) {
@@ -54,6 +56,7 @@ func (p *Parser) parse(line string, state *State) error {
 	// #-yodoc run
 	// #-yodoc #
 	// #-yodoc checks
+	// #-yodoc read
 	if strings.HasPrefix(line, "#-yodoc # ") {
 		return nil
 	}
@@ -61,11 +64,13 @@ func (p *Parser) parse(line string, state *State) error {
 		state.Blocks = append(state.Blocks, state.Current)
 		if state.Current.Kind == OutBlock {
 			// start block
-			// TODO
 			state.Current = &Block{
 				Lines: []string{line},
 			}
 			return nil
+		}
+		if state.Current.Kind == UnknownBlock {
+			state.Current.Kind = OtherBlock
 		}
 		// end block
 		state.Current.Lines = append(state.Current.Lines, line)

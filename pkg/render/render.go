@@ -96,7 +96,7 @@ func (r *Renderer) Render(ctx context.Context, src, dest, txt string, fm *frontm
 	}
 	defer destFile.Close()
 
-	tpl := r.NewTemplate().Funcs(Funcs(ctx, r.fs, r.tasks, src, fm))
+	tpl := r.NewTemplate().Funcs(Funcs(ctx, r.fs, src, fm))
 
 	r.setDelim(tpl, fm)
 

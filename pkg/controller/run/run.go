@@ -128,7 +128,7 @@ func (c *Controller) findTemplates(src string, isSameDir bool) ([]string, error)
 
 func (c *Controller) getDest(src, dest, file string, fm *frontmatter.Frontmatter) (string, error) {
 	if fm != nil && fm.Dest != "" {
-		return filepath.Join(filepath.Dir(src), fm.Dest), nil
+		return filepath.Join(filepath.Dir(file), fm.Dest), nil
 	}
 	if src == dest {
 		if s := strings.TrimSuffix(file, "_yodoc.md"); s != file {
@@ -200,16 +200,23 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 			}
 			cmd.Dir = fm.Dir
 		case parser.MainBlock:
-			texts = append(texts, strings.Join(block.Lines, "\n"))
 			cmd := render.NewCommand(ctx, []string{"sh", "-c"}, fm.Dir, nil)
 			s := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
 			result = cmd.Run(s)
+			txt := strings.Join(block.Lines, "\n")
+			txt, err := c.render(ctx, renderer, file, fm, txt, result)
+			if err != nil {
+				return err
+			}
+			texts = append(texts, txt)
 		case parser.CheckBlock:
-			checks := []*config.Check{}
+			checks := struct {
+				Checks []*config.Check
+			}{}
 			if err := yaml.Unmarshal([]byte(strings.Join(block.Lines[1:len(block.Lines)-1], "\n")), &checks); err != nil {
 				return err
 			}
-			for _, check := range checks {
+			for _, check := range checks.Checks {
 				if err := check.Build(); err != nil {
 					return err
 				}
@@ -227,19 +234,43 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 				}
 			}
 		case parser.OtherBlock:
-			texts = append(texts, strings.Join(block.Lines, "\n"))
+			txt, err := c.render(ctx, renderer, file, fm, strings.Join(block.Lines, "\n"), result)
+			if err != nil {
+				return err
+			}
+			texts = append(texts, txt)
 		case parser.OutBlock:
-			texts = append(texts, strings.Join(block.Lines, "\n"))
+			txt, err := c.render(ctx, renderer, file, fm, strings.Join(block.Lines, "\n"), result)
+			if err != nil {
+				return err
+			}
+			texts = append(texts, txt)
 		default:
 			return fmt.Errorf("unknown block kind: %v", block.Kind)
 		}
 	}
 
+	fmt.Println(dest)
+	fmt.Println(strings.Join(texts, "\n") + render.Footer)
 	if err := afero.WriteFile(c.fs, dest, []byte(strings.Join(texts, "\n")+render.Footer), 0o644); err != nil { //nolint:mnd
 		return err
 	}
 
 	return nil
+}
+
+func (c *Controller) render(ctx context.Context, renderer Renderer, file string, fm *frontmatter.Frontmatter, txt string, result *render.CommandResult) (string, error) {
+	tpl := renderer.NewTemplate().Funcs(render.Funcs(ctx, c.fs, file, fm))
+	tpl.Delims(fm.Delim.GetLeft(), fm.Delim.GetRight())
+	tpl, err := tpl.Parse(txt)
+	if err != nil {
+		return "", err
+	}
+	buf := &bytes.Buffer{}
+	if err := tpl.Execute(buf, result); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func (c *Controller) setRenderer(renderer Renderer, cfg *config.Config, cfgPath string) error {
