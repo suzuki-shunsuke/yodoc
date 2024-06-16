@@ -41,6 +41,12 @@ yodoc init # Scaffold a configuration file
 yodoc run # Update document
 ```
 
+By default, yodoc searches template files and process all template files, but you can also process only specific template files.
+
+```sh
+yodoc run README_yodoc.md # [...<file>]
+```
+
 ## Usage
 
 ```
@@ -125,12 +131,13 @@ The following variables are available.
 yodoc supports the following annotations.
 
 - `#-yodoc hidden`: Executes a script and check if it succeeds but doesn't show the script and the output
-- `#-yodoc run`: Executes a script and show the script
+- `#-yodoc run`: Executes a script and show the script. The command must succeed
+- `#!yodoc run`: Executes a script and show the script. The command must fail
 - `#-yodoc # `: Code comment. This isn't outputted
 - `#-yodoc check`: Checks the result of the previous `#-yodoc run`
 - `#-yodoc dir <dir>`: Change the directory where a command is executed
 
-### `#-yodoc run`
+### `#-yodoc run`, `#!yodoc run`
 
 Executes a script and show the script.
 This annotation must use at the top of a code block surrounded by <code>```</code>.
@@ -145,7 +152,7 @@ npm test
 ```
 
 ```
-{{.CombinedOutput}}
+{{.CombinedOutput -}}
 ```
 </pre>
 
