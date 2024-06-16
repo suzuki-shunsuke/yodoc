@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -216,20 +215,7 @@ func (e *CommandError) Unwrap() error {
 	return e.err
 }
 
-func (c *Controller) handleHiddenBlock(ctx context.Context, fm *frontmatter.Frontmatter, block *parser.Block) error {
-	txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
-	cmd := exec.CommandContext(ctx, "sh", "-c", txt)
-	combinedOutput := &bytes.Buffer{}
-	cmd.Stdout = combinedOutput
-	cmd.Stderr = combinedOutput
-	cmd.Dir = filepath.Join(fm.Dir, block.Dir)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("execute a hidden block: %w", NewCommandError(err, txt, combinedOutput.String()))
-	}
-	return nil
-}
-
-func (c *Controller) handleMainBlock(ctx context.Context, renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block) (*render.CommandResult, string, error) {
+func (c *Controller) handleCommandBlock(ctx context.Context, renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block, hidden bool) (*render.CommandResult, string, error) {
 	cmd := render.NewCommand(ctx, []string{"sh", "-c"}, filepath.Join(fm.Dir, block.Dir), nil)
 	s := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
 	result := cmd.Run(s)
@@ -246,6 +232,9 @@ func (c *Controller) handleMainBlock(ctx context.Context, renderer Renderer, fm 
 		if err := c.check(check, result); err != nil {
 			return result, "", NewCommandError(err, result.Command, result.CombinedOutput).WithExpr(check.Expr)
 		}
+	}
+	if hidden {
+		return result, "", nil
 	}
 	txt := strings.Join(block.Lines, "\n")
 	txt, err := c.render(renderer, file, fm, txt, result)
@@ -282,9 +271,9 @@ func (c *Controller) handleOutBlock(renderer Renderer, fm *frontmatter.Frontmatt
 func (c *Controller) handleBlock(ctx context.Context, renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block, result *render.CommandResult) (*render.CommandResult, string, error) {
 	switch block.Kind {
 	case parser.HiddenBlock:
-		return result, "", c.handleHiddenBlock(ctx, fm, block)
+		return c.handleCommandBlock(ctx, renderer, fm, file, block, true)
 	case parser.MainBlock:
-		return c.handleMainBlock(ctx, renderer, fm, file, block)
+		return c.handleCommandBlock(ctx, renderer, fm, file, block, false)
 	case parser.CheckBlock:
 		return result, "", c.handleCheckBlock(block, result)
 	case parser.OtherBlock:
