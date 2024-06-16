@@ -2,9 +2,6 @@
 
 Keep document including commands and their results up to date.
 
-> [!CAUTION]
-> This project is still under development. Don't use this yet.
-
 yodoc is a CLI to maintain documents including commands and their results.
 When you write commands and their results in documents, it's hard to keep them up to date.
 They would become outdated soon.
