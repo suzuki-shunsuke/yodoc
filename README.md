@@ -214,11 +214,11 @@ npm test
 ```yaml
 #-yodoc check
 checks:
-  - expr: ExitCode != 0
+  - expr: ExitCode == 0
 ```
 </pre>
 
-The annotation `#-yodoc check` must use at the top of a code block surrounded by <code>```</code>.
+The annotation `#-yodoc check` is available at the top of a code block surrounded by <code>```</code>.
 The content of the code block must be YAML.
 `checks` is a list of checks.
 All checks must be true, otherwise it fails to generate document.
@@ -235,6 +235,20 @@ The following variables are passed.
 - `Stderr`: Standard error output
 - `CombinedOutput`: Output combined Stdout and Stderr
 - `RunError`: Error string if it fails to execute the command
+
+The annotation `#-yodoc check` can be also used in `#-yodoc run` and `#!yodoc run` blocks.
+
+```
+#-yodoc check <expr>
+```
+
+<pre>
+```sh
+#-yodoc run
+#-yodoc check Stdout contains "foo"
+npm test
+```
+</pre>
 
 ### Template variables
 

@@ -239,6 +239,14 @@ func (c *Controller) handleMainBlock(ctx context.Context, renderer Renderer, fm 
 	if block.Result == parser.FailureResult && result.ExitCode == 0 {
 		return result, "", NewCommandError(errors.New("command must fail but succeeded"), s, result.CombinedOutput)
 	}
+	for _, e := range block.Checks {
+		check := &config.Check{
+			Expr: e,
+		}
+		if err := c.check(check, result); err != nil {
+			return result, "", NewCommandError(err, result.Command, result.CombinedOutput).WithExpr(check.Expr)
+		}
+	}
 	txt := strings.Join(block.Lines, "\n")
 	txt, err := c.render(renderer, file, fm, txt, result)
 	if err != nil {
