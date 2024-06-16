@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/logrus-error/logerr"
+	"github.com/suzuki-shunsuke/yodoc/pkg/command"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
 	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 	"github.com/suzuki-shunsuke/yodoc/pkg/osfile"
@@ -223,6 +224,7 @@ func (c *Controller) handleHiddenBlock(ctx context.Context, fm *frontmatter.Fron
 	cmd.Stdout = combinedOutput
 	cmd.Stderr = combinedOutput
 	cmd.Dir = filepath.Join(fm.Dir, block.Dir)
+	command.SetCancel(cmd)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("execute a hidden block: %w", NewCommandError(err, txt, combinedOutput.String()))
 	}

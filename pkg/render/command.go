@@ -5,6 +5,8 @@ import (
 	"context"
 	"io"
 	"os/exec"
+
+	"github.com/suzuki-shunsuke/yodoc/pkg/command"
 )
 
 type CommandResult struct {
@@ -42,6 +44,7 @@ func (c *Command) Run(s string) *CommandResult {
 	combinedOutput := &bytes.Buffer{}
 	cmd.Stdout = io.MultiWriter(stdout, combinedOutput)
 	cmd.Stderr = io.MultiWriter(stderr, combinedOutput)
+	command.SetCancel(cmd)
 
 	if c.dir != "" {
 		cmd.Dir = c.dir
