@@ -39,6 +39,7 @@ type Block struct {
 	ReadFile string
 	Dir      string
 	Result   Result
+	Checks   []string
 }
 
 func (p *Parser) Parse(r io.Reader) ([]*Block, error) {
@@ -65,6 +66,7 @@ func (p *Parser) parse(line string, state *State) { //nolint:cyclop
 	// #-yodoc run
 	// #-yodoc #
 	// #-yodoc check
+	// #-yodoc check [<expr>]
 	// #-yodoc dir
 	if strings.HasPrefix(line, "#-yodoc # ") {
 		return
@@ -105,6 +107,13 @@ func (p *Parser) parse(line string, state *State) { //nolint:cyclop
 		state.Current.Result = FailureResult
 		return
 	case strings.HasPrefix(line, "#-yodoc check"):
+		if state.Current.Kind == MainBlock {
+			e := strings.TrimPrefix(line, "#-yodoc check")
+			if e != "" {
+				state.Current.Checks = append(state.Current.Checks, e)
+			}
+			return
+		}
 		state.Current.Kind = CheckBlock
 		return
 	default:
