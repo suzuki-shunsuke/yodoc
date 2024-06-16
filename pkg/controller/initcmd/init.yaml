@@ -6,18 +6,3 @@ dest: .
 delim:
   left: "{{"
   right: "}}"
-tasks:
-  - name: yodoc version
-    action:
-      # shell: ["sh", "-c"]
-      # script: yodoc_version.sh
-      # dir: foo
-      # env:
-      #   FOO: '{{ env "FOO" }}'
-      command: yodoc -v
-    before:
-      command: yodoc -v
-    after:
-      command: yodoc -v
-    checks:
-      - expr: ExitCode == 0

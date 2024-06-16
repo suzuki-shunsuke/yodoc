@@ -75,15 +75,9 @@ delim:
   # This is optional.
   left: "{{" # The default value is "{{"
   right: "}}" # The default value is "}}"
-tasks:
-  # A list of tasks
-  # ...
-  - name: gh version
-    action:
-      run: gh version
 ```
 
-`src`, `dest`, and `tasks` are required.
+`src` and `dest` are required.
 yodoc searches template files from `src`, and generates documents in `dest`.
 The file extension must be either `.md` or `.mdx`.
 
@@ -93,61 +87,6 @@ If `src` and `dest` are same, template file names must end with `_yodoc.md` or `
 
 - `README_yodoc.md` => `README.md`
 - `README_yodoc.mdx` => `README.mdx`
-
-### .tasks
-
-```yaml
-- name: gh version
-  action:
-    run: gh version
-  # before and after are optional.
-  # The structure is same as `action`.
-  before:
-    run: mkdir foo
-  after:
-    run: rm -R foo
-  checks:
-    # A list of checks.
-    - expr: ExitCode == 1
-```
-
-The command of `before` and `after` must succeed, otherwise it fails to render the template.
-
-### .tasks[].action, before, after
-
-```yaml
-# Either `run` or `script` is required.
-# Others are optional.
-run: gh version
-script: foo.sh # relative path from the configuration file
-shell: ["sh", "-c"] # shell to execute the command
-dir: foo # The directory where the command is executed. A relative path from the configuration file
-env:
-  # environment variables to pass the command
-  # Go's template is available.
-  FOO: '{{env "HOME"}}/foo'
-```
-
-### .tasks[].checks[]
-
-```yaml
-# expr is an expression of 
-- expr: ExitCode == 0
-```
-
-`expr` is an expression of [expr-lang/expr](https://github.com/expr-lang/expr).
-The expression must return a boolean.
-
-The following variables are passed.
-
-- `Command`: Executed command
-- `ExitCode`: Exit code
-- `Stdout`: Standard output 
-- `Stderr`: Standard error output
-- `CombinedOutput`: Output combined Stdout and Stderr
-- `RunError`: Error string if it fails to execute the command
-
-All checks must be true, otherwise the task fails.
 
 ## Template
 
@@ -181,6 +120,139 @@ The following variables are available.
 - `DestDir`: a directory where a file is generated
 - `ConfigDir`: a directory where a configuration file exists
 
+### Annotation
+
+yodoc supports the following annotations.
+
+- `#-yodoc hidden`: Executes a script and check if it succeeds but doesn't show the script and the output
+- `#-yodoc run`: Executes a script and show the script
+- `#-yodoc # `: Code comment. This isn't outputted
+- `#-yodoc check`: Checks the result of the previous `#-yodoc run`
+- `#-yodoc dir <dir>`: Change the directory where a command is executed
+
+### `#-yodoc run`
+
+Executes a script and show the script.
+This annotation must use at the top of a code block surrounded by <code>```</code>.
+You can use the result in templates.
+
+e.g.
+
+<pre>
+```sh
+#-yodoc run
+npm test
+```
+
+```
+{{.CombinedOutput}}
+```
+</pre>
+
+### `#-yodoc hidden`
+
+Executes a script and check if it succeeds but doesn't show the script and the output.
+This annotation must use at the top of a code block surrounded by <code>```</code>.
+This annotation is used for preprocess, test, and clean up.
+
+e.g.
+
+<pre>
+```sh
+#-yodoc hidden
+rm foo.json # Delete foo.json before `make init`
+```
+
+```sh
+#-yodoc run
+make init
+```
+
+```sh
+#-yodoc hidden
+test -f foo.json # Test if `make init` creates foo.json
+```
+
+# ...
+
+```sh
+#-yodoc hidden
+rm foo.json # Clean up
+```
+</pre>
+
+#### `#-yodoc dir <dir>`
+
+Change the directory where a command is executed.
+This annotation must use in a code block.
+
+e.g.
+
+```sh
+#-yodoc hidden
+#-yodoc dir foo
+rm foo.json # Clean up
+```
+
+#### Checks
+
+e.g.
+
+<pre>
+```sh
+#-yodoc run
+npm test
+```
+
+```yaml
+#-yodoc check
+checks:
+  - expr: ExitCode != 0
+```
+</pre>
+
+The annotation `#-yodoc check` must use at the top of a code block surrounded by <code>```</code>.
+The content of the code block must be YAML.
+`checks` is a list of checks.
+All checks must be true, otherwise it fails to generate document.
+check has the following fields.
+
+- `expr`: An expression of [expr-lang/expr](https://github.com/expr-lang/expr).
+
+The expression must return a boolean.
+The following variables are passed.
+
+- `Command`: Executed command
+- `ExitCode`: Exit code
+- `Stdout`: Standard output 
+- `Stderr`: Standard error output
+- `CombinedOutput`: Output combined Stdout and Stderr
+- `RunError`: Error string if it fails to execute the command
+
+### Template variables
+
+In templates, the result of `#-yodoc run` is available.
+
+- `Command`: Executed command
+- `ExitCode`: Exit code
+- `Stdout`: Standard output 
+- `Stderr`: Standard error output
+- `CombinedOutput`: Output combined Stdout and Stderr
+- `RunError`: Error string if it fails to execute the command
+
+e.g.
+
+<pre>
+```sh
+#-yodoc run
+npm test
+```
+
+```
+{{.CombinedOutput}}
+```
+</pre>
+
 ### Template functions
 
 [sprig functions](https://masterminds.github.io/sprig/) are available.
@@ -193,7 +265,6 @@ But the following functions are unavailable for security reason.
 Furthermore, some custom functions are available.
 
 - `Read`: Read a file
-- `Task`: Execute a task
 
 #### Read
 
@@ -204,42 +275,6 @@ Furthermore, some custom functions are available.
 `Read` takes one argument, which is a file path to read.
 The file path is a relative path from the template file.
 `Read` returns a string which is the file content.
-
-#### Task
-
-```
-{{with Task "gh version"}}
-
-{{.Command}}
-
-{{.CombinedOutput}}
-
-{{end}}
-```
-
-Task takes one argument, which is a task name.
-The task must be defined in the configuration file.
-
-```yaml
-tasks:
-  - name: gh version
-    # ...
-```
-
-1. Run `before`
-1. Run `action`
-1. Run `after`
-1. Test the result by `checks`
-
-Task executes a command and returns its result.
-The result has the following attributes.
-
-- `Command`: Executed command
-- `ExitCode`: Exit code
-- `Stdout`: Standard output 
-- `Stderr`: Standard error output
-- `CombinedOutput`: Output combined Stdout and Stderr
-- `RunError`: Error string if it fails to execute the command
 
 ## Automatic update by CI
 

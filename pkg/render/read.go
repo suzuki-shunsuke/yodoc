@@ -1,7 +1,6 @@
 package render
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 
@@ -9,14 +8,12 @@ import (
 )
 
 type Read struct {
-	ctx  context.Context //nolint:containedctx
 	fs   afero.Fs
 	base string
 }
 
-func NewRead(ctx context.Context, fs afero.Fs, base string) *Read {
+func NewRead(fs afero.Fs, base string) *Read {
 	return &Read{
-		ctx:  ctx,
 		fs:   fs,
 		base: base,
 	}
