@@ -25,11 +25,20 @@ const (
 	OutBlock
 )
 
+type Result int
+
+const (
+	UnknownResult Result = iota
+	SuccessResult
+	FailureResult
+)
+
 type Block struct {
 	Kind     Kind
 	Lines    []string
 	ReadFile string
 	Dir      string
+	Result   Result
 }
 
 func (p *Parser) Parse(r io.Reader) ([]*Block, error) {
@@ -50,7 +59,7 @@ func (p *Parser) Parse(r io.Reader) ([]*Block, error) {
 	return append(state.Blocks, state.Current), nil
 }
 
-func (p *Parser) parse(line string, state *State) {
+func (p *Parser) parse(line string, state *State) { //nolint:cyclop
 	// #-yodoc hidden
 	// ```
 	// #-yodoc run
@@ -89,6 +98,11 @@ func (p *Parser) parse(line string, state *State) {
 		return
 	case strings.HasPrefix(line, "#-yodoc run"):
 		state.Current.Kind = MainBlock
+		state.Current.Result = SuccessResult
+		return
+	case strings.HasPrefix(line, "#!yodoc run"):
+		state.Current.Kind = MainBlock
+		state.Current.Result = FailureResult
 		return
 	case strings.HasPrefix(line, "#-yodoc check"):
 		state.Current.Kind = CheckBlock

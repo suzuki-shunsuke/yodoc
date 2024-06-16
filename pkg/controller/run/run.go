@@ -13,6 +13,7 @@ import (
 	"github.com/expr-lang/expr"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
+	"github.com/suzuki-shunsuke/logrus-error/logerr"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
 	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 	"github.com/suzuki-shunsuke/yodoc/pkg/osfile"
@@ -23,6 +24,7 @@ import (
 
 type Param struct {
 	ConfigFilePath string
+	Files          []string
 }
 
 func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) error {
@@ -46,15 +48,21 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) err
 		return fmt.Errorf("create a destination directory: %w", err)
 	}
 
-	// find templates
-	files, err := c.findTemplates(src, cfg.Src == cfg.Dest)
-	if err != nil {
-		return err
+	files := param.Files
+	if len(files) == 0 {
+		// find templates
+		a, err := c.findTemplates(src, cfg.Src == cfg.Dest)
+		if err != nil {
+			return err
+		}
+		files = a
 	}
 
 	for _, file := range files {
 		if err := c.handleTemplate(ctx, renderer, src, dest, file, cfgPath); err != nil {
-			return err
+			return logerr.WithFields(err, logrus.Fields{ //nolint:wrapcheck
+				"file": file,
+			})
 		}
 	}
 	return nil
@@ -174,6 +182,40 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 	return nil
 }
 
+type CommandError struct {
+	Command        string
+	CombinedOutput string
+	Expr           string
+	Checks         string
+	err            error
+}
+
+func NewCommandError(err error, command, combinedOutput string) *CommandError {
+	return &CommandError{
+		Command:        command,
+		CombinedOutput: combinedOutput,
+		err:            err,
+	}
+}
+
+func (e *CommandError) WithExpr(exp string) *CommandError {
+	e.Expr = exp
+	return e
+}
+
+func (e *CommandError) WithChecks(checks string) *CommandError {
+	e.Checks = checks
+	return e
+}
+
+func (e *CommandError) Error() string {
+	return e.err.Error()
+}
+
+func (e *CommandError) Unwrap() error {
+	return e.err
+}
+
 func (c *Controller) handleHiddenBlock(ctx context.Context, fm *frontmatter.Frontmatter, block *parser.Block) error {
 	txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
 	cmd := exec.CommandContext(ctx, "sh", "-c", txt)
@@ -182,8 +224,7 @@ func (c *Controller) handleHiddenBlock(ctx context.Context, fm *frontmatter.Fron
 	cmd.Stderr = combinedOutput
 	cmd.Dir = filepath.Join(fm.Dir, block.Dir)
 	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "[ERROR] Hidden command failed", "\n", txt, "\n", combinedOutput.String())
-		return fmt.Errorf("execute a hidden block: %w", err)
+		return fmt.Errorf("execute a hidden block: %w", NewCommandError(err, txt, combinedOutput.String()))
 	}
 	return nil
 }
@@ -192,10 +233,16 @@ func (c *Controller) handleMainBlock(ctx context.Context, renderer Renderer, fm 
 	cmd := render.NewCommand(ctx, []string{"sh", "-c"}, filepath.Join(fm.Dir, block.Dir), nil)
 	s := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
 	result := cmd.Run(s)
+	if block.Result == parser.SuccessResult && result.ExitCode != 0 {
+		return result, "", NewCommandError(errors.New("command failed"), s, result.CombinedOutput)
+	}
+	if block.Result == parser.FailureResult && result.ExitCode == 0 {
+		return result, "", NewCommandError(errors.New("command must fail but succeeded"), s, result.CombinedOutput)
+	}
 	txt := strings.Join(block.Lines, "\n")
 	txt, err := c.render(renderer, file, fm, txt, result)
 	if err != nil {
-		return result, "", err
+		return result, "", NewCommandError(err, s, result.CombinedOutput)
 	}
 	return result, txt, nil
 }
@@ -206,12 +253,11 @@ func (c *Controller) handleCheckBlock(block *parser.Block, result *render.Comman
 	}{}
 	txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
 	if err := yaml.Unmarshal([]byte(txt), &checks); err != nil {
-		return fmt.Errorf("unmarshal a checks block as YAML: %w", err)
+		return fmt.Errorf("unmarshal a checks block as YAML: %w", NewCommandError(err, result.Command, result.CombinedOutput).WithChecks(txt))
 	}
 	for _, check := range checks.Checks {
 		if err := c.check(check, result); err != nil {
-			fmt.Fprintln(os.Stderr, "[ERROR] Check failed", "\n", result.Command, "\n", check.Expr, "\n", err.Error())
-			return err
+			return NewCommandError(err, result.Command, result.CombinedOutput).WithExpr(check.Expr)
 		}
 	}
 	return nil
@@ -282,7 +328,9 @@ func (c *Controller) check(check *config.Check, result *render.CommandResult) er
 
 func (c *Controller) render(renderer Renderer, file string, fm *frontmatter.Frontmatter, txt string, result *render.CommandResult) (string, error) {
 	tpl := renderer.NewTemplate().Funcs(render.Funcs(c.fs, file))
-	tpl.Delims(fm.Delim.GetLeft(), fm.Delim.GetRight())
+	if fm != nil && fm.Delim != nil {
+		tpl.Delims(fm.Delim.GetLeft(), fm.Delim.GetRight())
+	}
 	tpl, err := tpl.Parse(txt)
 	if err != nil {
 		return "", fmt.Errorf("parse a template: %w", err)

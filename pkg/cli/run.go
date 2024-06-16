@@ -38,5 +38,6 @@ func (rc *runCommand) action(c *cli.Context) error {
 	log.SetColor(c.String("log-color"), logE)
 	return ctrl.Run(c.Context, logE, &run.Param{ //nolint:wrapcheck
 		ConfigFilePath: c.String("config"),
+		Files:          c.Args().Slice(),
 	})
 }
