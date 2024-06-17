@@ -3,7 +3,6 @@ package parser
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"strings"
 )
 
@@ -34,33 +33,38 @@ const (
 )
 
 type Block struct {
-	Kind     Kind
-	Lines    []string
-	ReadFile string
-	Dir      string
-	Result   Result
-	Checks   []string
+	Kind      Kind
+	Lines     []string
+	ReadFile  string
+	Dir       string
+	Result    Result
+	Checks    []string
+	StartLine int
+	EndLine   int
 }
 
-func (p *Parser) Parse(r io.Reader) ([]*Block, error) {
-	scanner := bufio.NewScanner(r)
+func (p *Parser) Parse(ln int, lastLine string, scanner *bufio.Scanner) ([]*Block, error) {
 	state := &State{
 		Current: &Block{
-			Kind: OutBlock,
+			Kind:      OutBlock,
+			StartLine: 1,
+			Lines:     []string{lastLine},
 		},
 	}
 
 	for scanner.Scan() {
-		p.parse(scanner.Text(), state)
+		p.parse(ln, scanner.Text(), state)
+		ln++
 	}
 
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("scan a template file: %w", err)
 	}
+	state.Current.EndLine = ln - 1
 	return append(state.Blocks, state.Current), nil
 }
 
-func (p *Parser) parse(line string, state *State) { //nolint:cyclop
+func (p *Parser) parse(ln int, line string, state *State) { //nolint:cyclop,funlen
 	// #-yodoc hidden
 	// ```
 	// #-yodoc run
@@ -79,8 +83,10 @@ func (p *Parser) parse(line string, state *State) { //nolint:cyclop
 		state.Blocks = append(state.Blocks, state.Current)
 		if state.Current.Kind == OutBlock {
 			// start block
+			state.Current.EndLine = ln - 1
 			state.Current = &Block{
-				Lines: []string{line},
+				Lines:     []string{line},
+				StartLine: ln,
 			}
 			return
 		}
@@ -89,8 +95,10 @@ func (p *Parser) parse(line string, state *State) { //nolint:cyclop
 		}
 		// end block
 		state.Current.Lines = append(state.Current.Lines, line)
+		state.Current.EndLine = ln
 		state.Current = &Block{
-			Kind: OutBlock,
+			Kind:      OutBlock,
+			StartLine: ln + 1,
 		}
 		return
 	}

@@ -1,6 +1,7 @@
 package run
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -135,12 +136,13 @@ func (c *Controller) getDest(src, dest, file string, fm *frontmatter.Frontmatter
 }
 
 func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src, dest, file, cfgPath string) error { //nolint:cyclop
-	b, err := afero.ReadFile(c.fs, file)
+	f, err := c.fs.Open(file)
 	if err != nil {
-		return fmt.Errorf("read a template file: %w", err)
+		return fmt.Errorf("open a template file: %w", err)
 	}
-	s := string(b)
-	fm, txt, err := frontmatter.Parse(s)
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	fm, lastLine, ln, err := frontmatter.Parse(scanner)
 	if err != nil {
 		return fmt.Errorf("parse frontmatter: %w", err)
 	}
@@ -155,9 +157,8 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 		}
 	}
 
-	r := strings.NewReader(txt)
 	p := &parser.Parser{}
-	blocks, err := p.Parse(r)
+	blocks, err := p.Parse(ln+1, lastLine, scanner)
 	if err != nil {
 		return fmt.Errorf("parse a template: %w", err)
 	}
@@ -187,6 +188,8 @@ type CommandError struct {
 	Expr           string
 	Checks         string
 	err            error
+	Start          int
+	End            int
 }
 
 func NewCommandError(err error, command, combinedOutput string) *CommandError {
@@ -207,6 +210,12 @@ func (e *CommandError) WithChecks(checks string) *CommandError {
 	return e
 }
 
+func (e *CommandError) WithLocation(start, end int) *CommandError {
+	e.Start = start
+	e.End = end
+	return e
+}
+
 func (e *CommandError) Error() string {
 	return e.err.Error()
 }
@@ -220,7 +229,7 @@ func (c *Controller) handleCommandBlock(ctx context.Context, renderer Renderer, 
 	s := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
 	result := cmd.Run(s)
 	if block.Result == parser.SuccessResult && result.ExitCode != 0 {
-		return result, "", NewCommandError(errors.New("command failed"), s, result.CombinedOutput)
+		return result, "", NewCommandError(errors.New("command failed"), s, result.CombinedOutput).WithLocation(block.StartLine, block.EndLine)
 	}
 	if block.Result == parser.FailureResult && result.ExitCode == 0 {
 		return result, "", NewCommandError(errors.New("command must fail but succeeded"), s, result.CombinedOutput)

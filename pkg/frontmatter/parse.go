@@ -1,6 +1,7 @@
 package frontmatter
 
 import (
+	"bufio"
 	"fmt"
 	"strings"
 
@@ -33,20 +34,30 @@ func (d *Delim) GetRight() string {
 	return d.Right
 }
 
-func Parse(s string) (*Frontmatter, string, error) {
-	if !strings.HasPrefix(s, "---") {
-		return nil, s, nil
+func Parse(scanner *bufio.Scanner) (*Frontmatter, string, int, error) {
+	if scanner.Scan() {
+		line := scanner.Text()
+		if line != "---" {
+			return nil, line, 1, nil
+		}
+	} else {
+		if err := scanner.Err(); err != nil {
+			return nil, "", 1, fmt.Errorf("scan a template file: %w", err)
+		}
+		return nil, "", 1, nil
 	}
-	lines := strings.Split(s, "\n")
+
 	matterLines := make([]string, 0, 8) //nolint:mnd
-	remaining := ""
 	breaked := false
-	for i, line := range lines[1:] {
+	ln := 1
+	line := ""
+	for scanner.Scan() {
+		ln++
+		line = scanner.Text()
 		if breaked {
 			if line == "" {
 				continue
 			}
-			remaining = strings.Join(lines[i+1:], "\n")
 			break
 		}
 		if line == "---" {
@@ -55,10 +66,15 @@ func Parse(s string) (*Frontmatter, string, error) {
 		}
 		matterLines = append(matterLines, line)
 	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, line, ln, fmt.Errorf("scan a template file: %w", err)
+	}
+
 	matterS := strings.Join(matterLines, "\n")
 	m := &Frontmatter{}
 	if err := yaml.Unmarshal([]byte(matterS), m); err != nil {
-		return nil, "", fmt.Errorf("unmarshal a front matter as YAML: %w", err)
+		return nil, line, ln, fmt.Errorf("unmarshal a front matter as YAML: %w", err)
 	}
-	return m, remaining, nil
+	return m, line, ln, nil
 }
