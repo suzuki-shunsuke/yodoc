@@ -68,7 +68,7 @@ If no configuration file is found, `yodoc` fails.
 yodoc.yaml
 
 ```yaml
-# File pathes are relative paths from the configuration file.
+# File paths are relative paths from the configuration file.
 src: src # source directory where templates files are located
 dest: . # destination directory where files are generated
 delim:
@@ -91,7 +91,7 @@ If `src` and `dest` are same, template file names must end with `_yodoc.md` or `
 
 ## Template
 
-Template files are renderered by Go's [text/template](https://pkg.go.dev/text/template).
+Template files are rendered by Go's [text/template](https://pkg.go.dev/text/template).
 
 ### Front matter
 
@@ -114,7 +114,7 @@ Front matter supports the following fields.
 - `dest`
 - `delim`
 
-`dir` is renderered by Go's [text/template](https://pkg.go.dev/text/template).
+`dir` is rendered by Go's [text/template](https://pkg.go.dev/text/template).
 The following variables are available.
 
 - `SourceDir`: a directory where a template file exists
