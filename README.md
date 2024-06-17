@@ -11,7 +11,7 @@ It executes commands, tests results, and generates documents based on template f
 
 ## :warning: Security
 
-yodoc executes commands according to the configuration file, so you shouldn't run yodoc with an untrusted configuration file.
+yodoc executes commands based on template files, so you shouldn't run yodoc if they are untrusted.
 
 ## How to install
 
