@@ -46,9 +46,7 @@ yodoc run README_yodoc.md # [...<file>]
 
 ## Usage
 
-```
-
-```
+[USAGE.md](USAGE.md)
 
 ## Environment variables
 
