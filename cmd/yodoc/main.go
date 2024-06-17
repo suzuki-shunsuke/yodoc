@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -30,7 +31,7 @@ func main() {
 func errMsg(err error) string {
 	ce := &run.CommandError{}
 	msg := "yodoc failed"
-	if errors.As(err, &ce) {
+	if errors.As(err, &ce) { //nolint:nestif
 		if ce.Command != "" {
 			msg += "\n" + "command:\n" + ce.Command
 		}
@@ -42,6 +43,9 @@ func errMsg(err error) string {
 		}
 		if ce.Expr != "" {
 			msg += "\n" + "expr: " + ce.Expr
+		}
+		if ce.Start != 0 && ce.End != 0 {
+			msg += "\n" + "line number: " + strconv.Itoa(ce.Start) + " ~ " + strconv.Itoa(ce.End)
 		}
 	}
 	return msg
