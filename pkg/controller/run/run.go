@@ -28,7 +28,7 @@ type Param struct {
 }
 
 func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) error {
-	// read config
+	// find and read config
 	cfg := &config.Config{}
 	cfgPath, err := c.readConfig(param.ConfigFilePath, cfg)
 	if err != nil {
@@ -136,16 +136,20 @@ func (c *Controller) getDest(src, dest, file string, fm *frontmatter.Frontmatter
 }
 
 func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src, dest, file, cfgPath string) error { //nolint:cyclop
+	// read and parse a template file
 	f, err := c.fs.Open(file)
 	if err != nil {
 		return fmt.Errorf("open a template file: %w", err)
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
+	// parse frontmatter
 	fm, lastLine, ln, err := frontmatter.Parse(scanner)
 	if err != nil {
 		return fmt.Errorf("parse frontmatter: %w", err)
 	}
+
+	// get a destination file path
 	dest, err = c.getDest(src, dest, file, fm)
 	if err != nil {
 		return err
@@ -157,6 +161,7 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 		}
 	}
 
+	// parse a template file
 	p := &parser.Parser{}
 	blocks, err := p.Parse(ln+1, lastLine, scanner)
 	if err != nil {
@@ -175,6 +180,7 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 		result = a
 	}
 
+	// write a document
 	if err := afero.WriteFile(c.fs, dest, []byte(strings.Join(texts, "\n")+render.Footer), 0o644); err != nil { //nolint:mnd
 		return fmt.Errorf("write a document: %w", err)
 	}
@@ -224,16 +230,22 @@ func (e *CommandError) Unwrap() error {
 	return e.err
 }
 
+// handleCommandBlock handles a command block and returns a command result and a text.
 func (c *Controller) handleCommandBlock(ctx context.Context, renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block, hidden bool) (*render.CommandResult, string, error) {
 	cmd := render.NewCommand(ctx, []string{"sh", "-c"}, filepath.Join(fm.Dir, block.Dir), nil)
 	s := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
+	// run a command
 	result := cmd.Run(s)
+
+	// check the command exit code
 	if block.Result == parser.SuccessResult && result.ExitCode != 0 {
 		return result, "", NewCommandError(errors.New("command failed"), s, result.CombinedOutput).WithLocation(block.StartLine, block.EndLine)
 	}
 	if block.Result == parser.FailureResult && result.ExitCode == 0 {
 		return result, "", NewCommandError(errors.New("command must fail but succeeded"), s, result.CombinedOutput)
 	}
+
+	// check the command result based on checks
 	for _, e := range block.Checks {
 		check := &config.Check{
 			Expr: e,
@@ -242,25 +254,33 @@ func (c *Controller) handleCommandBlock(ctx context.Context, renderer Renderer, 
 			return result, "", NewCommandError(err, result.Command, result.CombinedOutput).WithExpr(check.Expr)
 		}
 	}
+
 	if hidden {
+		// If the block is hidden, the command result isn't rendered.
 		return result, "", nil
 	}
+
+	// render the block
 	txt := strings.Join(block.Lines, "\n")
-	txt, err := c.render(renderer, file, fm, txt, result)
+	txt, err := c.render(renderer, file, fm.GetDelim(), txt, result)
 	if err != nil {
 		return result, "", NewCommandError(err, s, result.CombinedOutput)
 	}
 	return result, txt, nil
 }
 
+// handleCheckBlock handles a check block.
 func (c *Controller) handleCheckBlock(block *parser.Block, result *render.CommandResult) error {
+	// Remove code block markers ``` and get the content of the block.
+	txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
 	checks := struct {
 		Checks []*config.Check
 	}{}
-	txt := strings.Join(block.Lines[1:len(block.Lines)-1], "\n")
+	// Unmarshal the content of the block as YAML.
 	if err := yaml.Unmarshal([]byte(txt), &checks); err != nil {
 		return fmt.Errorf("unmarshal a checks block as YAML: %w", NewCommandError(err, result.Command, result.CombinedOutput).WithChecks(txt))
 	}
+	// Checks the command result based on checks.
 	for _, check := range checks.Checks {
 		if err := c.check(check, result); err != nil {
 			return NewCommandError(err, result.Command, result.CombinedOutput).WithExpr(check.Expr)
@@ -269,14 +289,17 @@ func (c *Controller) handleCheckBlock(block *parser.Block, result *render.Comman
 	return nil
 }
 
-func (c *Controller) handleOtherBlock(renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block, result *render.CommandResult) (string, error) {
-	return c.render(renderer, file, fm, strings.Join(block.Lines, "\n"), result)
+// handleOtherBlock handles a other block.
+func (c *Controller) handleOtherBlock(renderer Renderer, delim *frontmatter.Delim, file string, block *parser.Block, result *render.CommandResult) (string, error) {
+	return c.render(renderer, file, delim, strings.Join(block.Lines, "\n"), result)
 }
 
-func (c *Controller) handleOutBlock(renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block, result *render.CommandResult) (string, error) {
-	return c.render(renderer, file, fm, strings.Join(block.Lines, "\n"), result)
+// handleOutBlock handles a out block.
+func (c *Controller) handleOutBlock(renderer Renderer, delim *frontmatter.Delim, file string, block *parser.Block, result *render.CommandResult) (string, error) {
+	return c.render(renderer, file, delim, strings.Join(block.Lines, "\n"), result)
 }
 
+// handleBlock handles a block and converts it to a text and gets a command result.
 func (c *Controller) handleBlock(ctx context.Context, renderer Renderer, fm *frontmatter.Frontmatter, file string, block *parser.Block, result *render.CommandResult) (*render.CommandResult, string, error) {
 	switch block.Kind {
 	case parser.HiddenBlock:
@@ -286,16 +309,17 @@ func (c *Controller) handleBlock(ctx context.Context, renderer Renderer, fm *fro
 	case parser.CheckBlock:
 		return result, "", c.handleCheckBlock(block, result)
 	case parser.OtherBlock:
-		txt, err := c.handleOtherBlock(renderer, fm, file, block, result)
+		txt, err := c.handleOtherBlock(renderer, fm.GetDelim(), file, block, result)
 		return result, txt, err
 	case parser.OutBlock:
-		txt, err := c.handleOutBlock(renderer, fm, file, block, result)
+		txt, err := c.handleOutBlock(renderer, fm.GetDelim(), file, block, result)
 		return result, txt, err
 	default:
 		return result, "", fmt.Errorf("unknown block kind: %v", block.Kind)
 	}
 }
 
+// setFormatterDir renders the front matter's dir.
 func (c *Controller) setFormatterDir(renderer Renderer, fm *frontmatter.Frontmatter, file, dest, cfgPath string) error {
 	tpl, err := renderer.NewTemplate().Parse(fm.Dir)
 	if err != nil {
@@ -332,10 +356,11 @@ func (c *Controller) check(check *config.Check, result *render.CommandResult) er
 	return nil
 }
 
-func (c *Controller) render(renderer Renderer, file string, fm *frontmatter.Frontmatter, txt string, result *render.CommandResult) (string, error) {
+// render renders a template.
+func (c *Controller) render(renderer Renderer, file string, delim *frontmatter.Delim, txt string, result *render.CommandResult) (string, error) {
 	tpl := renderer.NewTemplate().Funcs(render.Funcs(c.fs, file))
-	if fm != nil && fm.Delim != nil {
-		tpl.Delims(fm.Delim.GetLeft(), fm.Delim.GetRight())
+	if delim != nil {
+		tpl.Delims(delim.GetLeft(), delim.GetRight())
 	}
 	tpl, err := tpl.Parse(txt)
 	if err != nil {
@@ -348,6 +373,7 @@ func (c *Controller) render(renderer Renderer, file string, fm *frontmatter.Fron
 	return buf.String(), nil
 }
 
+// setRenderer configres the renderer based on config.
 func (c *Controller) setRenderer(renderer Renderer, cfg *config.Config) error {
 	renderer.SetDelims(cfg.Delim.GetLeft(), cfg.Delim.GetRight())
 	return nil

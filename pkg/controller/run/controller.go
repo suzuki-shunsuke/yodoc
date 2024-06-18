@@ -24,7 +24,7 @@ type ConfigReader interface {
 }
 
 type Renderer interface {
-	Render(src, dest, txt string, fm *frontmatter.Frontmatter) error
+	Render(src, dest, txt string, delim *frontmatter.Delim) error
 	NewTemplate() *template.Template
 	SetDelims(left, right string)
 }

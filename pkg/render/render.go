@@ -55,7 +55,7 @@ func (r *Renderer) NewTemplateWithEnv() *template.Template {
 	return template.New("_").Funcs(r.funcsWithEnv)
 }
 
-func (r *Renderer) Render(src, dest, txt string, fm *frontmatter.Frontmatter) error {
+func (r *Renderer) Render(src, dest, txt string, delim *frontmatter.Delim) error {
 	destFile, err := r.fs.Create(dest)
 	if err != nil {
 		return fmt.Errorf("create a dest file: %w", err)
@@ -64,7 +64,7 @@ func (r *Renderer) Render(src, dest, txt string, fm *frontmatter.Frontmatter) er
 
 	tpl := r.NewTemplate().Funcs(Funcs(r.fs, src))
 
-	r.setDelim(tpl, fm)
+	r.setDelim(tpl, delim)
 
 	tpl, err = tpl.Parse(txt)
 	if err != nil {
@@ -82,15 +82,15 @@ func (r *Renderer) Render(src, dest, txt string, fm *frontmatter.Frontmatter) er
 	return nil
 }
 
-func (r *Renderer) setDelim(tpl *template.Template, fm *frontmatter.Frontmatter) {
+func (r *Renderer) setDelim(tpl *template.Template, delim *frontmatter.Delim) {
 	leftDelim := r.leftDelim
 	rightDelim := r.rightDelim
-	if fm != nil && fm.Delim != nil {
-		if fm.Delim.Left != "" {
-			leftDelim = fm.Delim.Left
+	if delim != nil {
+		if delim.Left != "" {
+			leftDelim = delim.Left
 		}
-		if fm.Delim.Right != "" {
-			leftDelim = fm.Delim.Right
+		if delim.Right != "" {
+			leftDelim = delim.Right
 		}
 	}
 	tpl.Delims(leftDelim, rightDelim)
