@@ -297,6 +297,9 @@ The file path is a relative path from the template file.
 You can update documents by CI automatically, but you need to be care about the security.
 We recommend executing yodoc by `push` event on the default branch and creating a pull request to update documents.
 
+- https://github.com/suzuki-shunsuke/yodoc-workflow - Reusable workflow to update documents
+- https://github.com/suzuki-shunsuke/poc-yodoc - Example of automation
+
 ## LICENSE
 
 [MIT](LICENSE)
