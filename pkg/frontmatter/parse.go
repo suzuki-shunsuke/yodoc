@@ -15,6 +15,13 @@ type Frontmatter struct {
 	Delim *Delim
 }
 
+func (f *Frontmatter) GetDelim() *Delim {
+	if f == nil {
+		return nil
+	}
+	return f.Delim
+}
+
 type Delim struct {
 	Left  string
 	Right string
