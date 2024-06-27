@@ -18,6 +18,29 @@ yodoc executes commands based on template files, so you shouldn't run yodoc if t
 `yodoc` is a single binary written in Go.
 So you only need to put the executable binary into `$PATH`.
 
+1. [Homebrew](https://brew.sh/)
+
+```sh
+brew install suzuki-shunsuke/yodoc/yodoc
+```
+
+2. [Scoop](https://scoop.sh/)
+
+```sh
+scoop bucket add lintnet https://github.com/suzuki-shunsuke/scoop-bucket
+scoop install yodoc
+```
+
+3. [aqua](https://aquaproj.github.io/)
+
+```sh
+aqua g -i suzuki-shunsuke/yodoc
+```
+
+4. Download a prebuilt binary from [GitHub Releases](https://github.com/lintnet/lintnet/releases) and install it into `$PATH`
+
+5. Go
+
 ```sh
 go install github.com/suzuki-shunsuke/yodoc@latest
 ```
