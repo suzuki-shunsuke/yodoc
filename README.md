@@ -42,7 +42,7 @@ aqua g -i suzuki-shunsuke/yodoc
 5. Go
 
 ```sh
-go install github.com/suzuki-shunsuke/yodoc@latest
+go install github.com/suzuki-shunsuke/yodoc/cmd/yodoc@latest
 ```
 
 ## How to use
