@@ -27,7 +27,7 @@ brew install suzuki-shunsuke/yodoc/yodoc
 2. [Scoop](https://scoop.sh/)
 
 ```sh
-scoop bucket add lintnet https://github.com/suzuki-shunsuke/scoop-bucket
+scoop bucket add suzuki-shunsuke https://github.com/suzuki-shunsuke/scoop-bucket
 scoop install yodoc
 ```
 
@@ -37,7 +37,7 @@ scoop install yodoc
 aqua g -i suzuki-shunsuke/yodoc
 ```
 
-4. Download a prebuilt binary from [GitHub Releases](https://github.com/lintnet/lintnet/releases) and install it into `$PATH`
+4. Download a prebuilt binary from [GitHub Releases](https://github.com/suzuki-shunsuke/yodoc/releases) and install it into `$PATH`
 
 5. Go
 
