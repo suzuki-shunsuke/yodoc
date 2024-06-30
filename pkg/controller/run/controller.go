@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
-	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 )
 
 type Controller struct {
@@ -24,7 +23,6 @@ type ConfigReader interface {
 }
 
 type Renderer interface {
-	RenderFile(src, dest, txt string, delim *frontmatter.Delim) error
 	NewTemplate() *template.Template
 	SetDelims(left, right string)
 }

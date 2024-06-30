@@ -1,12 +1,10 @@
 package render
 
 import (
-	"fmt"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/spf13/afero"
-	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 )
 
 type Renderer struct {
@@ -45,45 +43,4 @@ func (r *Renderer) NewTemplate() *template.Template {
 
 func (r *Renderer) NewTemplateWithEnv() *template.Template {
 	return template.New("_").Funcs(r.funcsWithEnv)
-}
-
-func (r *Renderer) RenderFile(src, dest, txt string, delim *frontmatter.Delim) error {
-	destFile, err := r.fs.Create(dest)
-	if err != nil {
-		return fmt.Errorf("create a dest file: %w", err)
-	}
-	defer destFile.Close()
-
-	tpl := r.NewTemplate().Funcs(Funcs(r.fs, src))
-
-	r.setDelim(tpl, delim)
-
-	tpl, err = tpl.Parse(txt)
-	if err != nil {
-		return fmt.Errorf("parse a template: %w", err)
-	}
-
-	if err := tpl.Execute(destFile, nil); err != nil {
-		return fmt.Errorf("execute a template: %w", err)
-	}
-
-	if _, err := destFile.WriteString(Footer); err != nil {
-		return fmt.Errorf("write a dest file: %w", err)
-	}
-
-	return nil
-}
-
-func (r *Renderer) setDelim(tpl *template.Template, delim *frontmatter.Delim) {
-	leftDelim := r.leftDelim
-	rightDelim := r.rightDelim
-	if delim != nil {
-		if delim.Left != "" {
-			leftDelim = delim.Left
-		}
-		if delim.Right != "" {
-			leftDelim = delim.Right
-		}
-	}
-	tpl.Delims(leftDelim, rightDelim)
 }
