@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/expr-lang/expr"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/logrus-error/logerr"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
+	"github.com/suzuki-shunsuke/yodoc/pkg/expr"
 	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
 	"github.com/suzuki-shunsuke/yodoc/pkg/osfile"
 	"github.com/suzuki-shunsuke/yodoc/pkg/parser"
@@ -156,7 +156,7 @@ func (c *Controller) handleTemplate(ctx context.Context, renderer Renderer, src,
 	}
 
 	if fm != nil && fm.Dir != "" {
-		if err := c.setFormatterDir(renderer, fm, file, dest, cfgPath); err != nil {
+		if err := c.setFrontmatterDir(renderer, fm, file, dest, cfgPath); err != nil {
 			return err
 		}
 	}
@@ -319,8 +319,8 @@ func (c *Controller) handleBlock(ctx context.Context, renderer Renderer, fm *fro
 	}
 }
 
-// setFormatterDir renders the front matter's dir.
-func (c *Controller) setFormatterDir(renderer Renderer, fm *frontmatter.Frontmatter, file, dest, cfgPath string) error {
+// setFrontmatterDir renders the front matter's dir.
+func (c *Controller) setFrontmatterDir(renderer Renderer, fm *frontmatter.Frontmatter, file, dest, cfgPath string) error {
 	tpl, err := renderer.NewTemplate().Parse(fm.Dir)
 	if err != nil {
 		return fmt.Errorf("parse front matter's dir: %w", err)
@@ -338,17 +338,10 @@ func (c *Controller) setFormatterDir(renderer Renderer, fm *frontmatter.Frontmat
 }
 
 func (c *Controller) check(check *config.Check, result *render.CommandResult) error {
-	if err := check.Build(); err != nil {
-		return fmt.Errorf("build a check: %w", err)
-	}
-	prog := check.GetExpr()
-	output, err := expr.Run(prog, result)
+	parser := &expr.Parser{}
+	b, err := parser.Eval(check.Expr, result)
 	if err != nil {
-		return fmt.Errorf("evaluate an expression: %w", err)
-	}
-	b, ok := output.(bool)
-	if !ok {
-		return errors.New("the result of the expression isn't a boolean value")
+		return fmt.Errorf("evaluate a check: %w", err)
 	}
 	if !b {
 		return errors.New("a check is false")
