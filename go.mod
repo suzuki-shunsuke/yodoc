@@ -1,6 +1,6 @@
 module github.com/suzuki-shunsuke/yodoc
 
-go 1.22.4
+go 1.23.3
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
