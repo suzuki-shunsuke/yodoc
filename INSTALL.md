@@ -63,7 +63,7 @@ aqua g -i cli/cli
 ```
 
 ```sh
-version=v0.1.1
+version=v0.1.2
 asset=yodoc_darwin_arm64.tar.gz
 gh release download -R suzuki-shunsuke/yodoc "$version" -p "$asset"
 gh attestation verify "$asset" \
@@ -80,7 +80,7 @@ aqua g -i slsa-framework/slsa-verifier
 ```
 
 ```sh
-version=v0.1.1
+version=v0.1.2
 asset=yodoc_darwin_arm64.tar.gz
 gh release download -R suzuki-shunsuke/yodoc "$version" -p "$asset" -p multiple.intoto.jsonl
 slsa-verifier verify-artifact "$asset" \
@@ -98,7 +98,7 @@ aqua g -i sigstore/cosign
 ```
 
 ```sh
-version=v0.1.1
+version=v0.1.2
 checksum_file="yodoc_${version#v}_checksums.txt"
 asset=yodoc_darwin_arm64.tar.gz
 gh release download "$version" \
