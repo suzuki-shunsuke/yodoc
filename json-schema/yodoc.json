@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/suzuki-shunsuke/yodoc/pkg/config/config",
+  "$ref": "#/$defs/Config",
+  "$defs": {
+    "Config": {
+      "properties": {
+        "src": {
+          "type": "string"
+        },
+        "dest": {
+          "type": "string"
+        },
+        "delim": {
+          "$ref": "#/$defs/Delim"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "src",
+        "dest"
+      ]
+    },
+    "Delim": {
+      "properties": {
+        "left": {
+          "type": "string"
+        },
+        "right": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  }
+}

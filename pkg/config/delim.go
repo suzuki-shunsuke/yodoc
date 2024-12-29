@@ -1,8 +1,8 @@
 package config
 
 type Delim struct {
-	Left  string
-	Right string
+	Left  string `json:"left,omitempty"`
+	Right string `json:"right,omitempty"`
 }
 
 func (d *Delim) GetLeft() string {
