@@ -112,6 +112,23 @@ If `src` and `dest` are same, template file names must end with `_yodoc.md` or `
 - `README_yodoc.md` => `README.md`
 - `README_yodoc.mdx` => `README.mdx`
 
+### JSON Schema
+
+- [yodoc.json](json-schema/yodoc.json)
+- https://raw.githubusercontent.com/suzuki-shunsuke/yodoc/refs/heads/main/json-schema/yodoc.json
+
+If you look for a CLI tool to validate configuration with JSON Schema, [ajv-cli](https://ajv.js.org/packages/ajv-cli.html) is useful.
+
+```sh
+ajv --spec=draft2020 -s json-schema/yodoc.json -d yodoc.yaml
+```
+
+#### Input Complementation by YAML Language Server
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/yodoc/refs/heads/main/json-schema/yodoc.json
+```
+
 ## Template
 
 Template files are rendered by Go's [text/template](https://pkg.go.dev/text/template).
