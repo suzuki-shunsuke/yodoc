@@ -1,5 +1,7 @@
 # yodoc
 
+[Install](INSTALL.md)
+
 Keep document including commands and their results up to date.
 
 yodoc is a CLI to maintain documents including commands and their results.
@@ -12,38 +14,6 @@ It executes commands, tests results, and generates documents based on template f
 ## :warning: Security
 
 yodoc executes commands based on template files, so you shouldn't run yodoc if they are untrusted.
-
-## How to install
-
-`yodoc` is a single binary written in Go.
-So you only need to put the executable binary into `$PATH`.
-
-1. [Homebrew](https://brew.sh/)
-
-```sh
-brew install suzuki-shunsuke/yodoc/yodoc
-```
-
-2. [Scoop](https://scoop.sh/)
-
-```sh
-scoop bucket add suzuki-shunsuke https://github.com/suzuki-shunsuke/scoop-bucket
-scoop install yodoc
-```
-
-3. [aqua](https://aquaproj.github.io/)
-
-```sh
-aqua g -i suzuki-shunsuke/yodoc
-```
-
-4. Download a prebuilt binary from [GitHub Releases](https://github.com/suzuki-shunsuke/yodoc/releases) and install it into `$PATH`
-
-5. Go
-
-```sh
-go install github.com/suzuki-shunsuke/yodoc/cmd/yodoc@latest
-```
 
 ## How to use
 
