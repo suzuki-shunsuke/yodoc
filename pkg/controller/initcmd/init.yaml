@@ -1,6 +1,6 @@
 ---
-# yodoc
-# https://github.com/suzuki-shunsuke/yodoc
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/yodoc/refs/heads/main/json-schema/yodoc.json
+# yodoc - https://github.com/suzuki-shunsuke/yodoc
 src: .
 dest: .
 delim:
