@@ -31,4 +31,3 @@ jobs:
     uses: ./.github/workflows/wc-test.yaml
     needs: path-filter
     permissions: {}
-
