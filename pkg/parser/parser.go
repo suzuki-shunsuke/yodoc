@@ -64,7 +64,7 @@ func (p *Parser) Parse(ln int, lastLine string, scanner *bufio.Scanner) ([]*Bloc
 	return append(state.Blocks, state.Current), nil
 }
 
-func (p *Parser) parse(ln int, line string, state *State) { //nolint:cyclop,funlen
+func (p *Parser) parse(ln int, line string, state *State) { //nolint:cyclop
 	// #-yodoc hidden
 	// ```
 	// #-yodoc run
