@@ -7,7 +7,7 @@ import (
 	"github.com/suzuki-shunsuke/yodoc/pkg/controller/run"
 	"github.com/suzuki-shunsuke/yodoc/pkg/log"
 	"github.com/suzuki-shunsuke/yodoc/pkg/render"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 type runCommand struct {

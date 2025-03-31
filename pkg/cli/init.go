@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/yodoc/pkg/controller/initcmd"
 	"github.com/suzuki-shunsuke/yodoc/pkg/log"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 type initCommand struct {
