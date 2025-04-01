@@ -16,7 +16,7 @@ func (vc *versionCommand) command() *cli.Command {
 	}
 }
 
-func (vc *versionCommand) action(ctx context.Context, cmd *cli.Command) error {
+func (vc *versionCommand) action(_ context.Context, cmd *cli.Command) error {
 	cli.ShowVersion(cmd)
 	return nil
 }

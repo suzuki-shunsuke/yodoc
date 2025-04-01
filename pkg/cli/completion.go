@@ -109,7 +109,7 @@ fi`)
 	return nil
 }
 
-func (cc *completionCommand) fishCompletionAction(ctx context.Context, cmd *cli.Command) error {
+func (cc *completionCommand) fishCompletionAction(_ context.Context, cmd *cli.Command) error {
 	s, err := cmd.ToFishCompletion()
 	if err != nil {
 		return fmt.Errorf("generate fish completion: %w", err)
