@@ -25,7 +25,7 @@ type LDFlags struct {
 }
 
 func (r *Runner) Run(ctx context.Context, args ...string) error {
-	return helpall.With(&cli.Command{
+	return helpall.With(&cli.Command{ //nolint:wrapcheck
 		Name:    "yodoc",
 		Usage:   "",
 		Version: r.LDFlags.Version + " (" + r.LDFlags.Commit + ")",
@@ -65,5 +65,5 @@ func (r *Runner) Run(ctx context.Context, args ...string) error {
 				SHA:     r.LDFlags.Commit,
 			}),
 		},
-	}, nil).Run(ctx, args) //nolint:wrapcheck
+	}, nil).Run(ctx, args)
 }
