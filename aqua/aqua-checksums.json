@@ -31,28 +31,28 @@
       "algorithm": "sha256"
     },
     {
-      "id": "github_release/github.com/goreleaser/goreleaser/v2.0.1/goreleaser_Darwin_all.tar.gz",
-      "checksum": "805C8C836BA6DB639DDBCB3BCEE7C3DAA8D479A189691530F07228563CBBF079",
+      "id": "github_release/github.com/goreleaser/goreleaser/v2.8.2/goreleaser_Darwin_all.tar.gz",
+      "checksum": "7331F6217BA3683A3B2E7C726D55AA6ADD3F3991716A87DD08533312464F24BF",
       "algorithm": "sha256"
     },
     {
-      "id": "github_release/github.com/goreleaser/goreleaser/v2.0.1/goreleaser_Linux_arm64.tar.gz",
-      "checksum": "030960B241728139E20A037240585A11AED60015AA22E17C127D270FA99BEE7F",
+      "id": "github_release/github.com/goreleaser/goreleaser/v2.8.2/goreleaser_Linux_arm64.tar.gz",
+      "checksum": "EBF55249A59A4073B89379316953B3CE2E7505E5980F9C22E23399AA4679BE69",
       "algorithm": "sha256"
     },
     {
-      "id": "github_release/github.com/goreleaser/goreleaser/v2.0.1/goreleaser_Linux_x86_64.tar.gz",
-      "checksum": "48CEA4E770468C85D3EE11E6C2FB7B59AF9F28080781D47C48C59BA95B2EB86B",
+      "id": "github_release/github.com/goreleaser/goreleaser/v2.8.2/goreleaser_Linux_x86_64.tar.gz",
+      "checksum": "847E2105D50DA9133E567CF5450CD437AE29181CABF13AD42683151BA0F5B587",
       "algorithm": "sha256"
     },
     {
-      "id": "github_release/github.com/goreleaser/goreleaser/v2.0.1/goreleaser_Windows_arm64.zip",
-      "checksum": "5490087617E7FC156E8FE3911D2C96E151A6454C580CAA60EE34A7A441A5B713",
+      "id": "github_release/github.com/goreleaser/goreleaser/v2.8.2/goreleaser_Windows_arm64.zip",
+      "checksum": "75FFFA11BF77BEDB39112E135B32F21FA8AAA1F1DF2923FBC3CC16A6F3FCBC1D",
       "algorithm": "sha256"
     },
     {
-      "id": "github_release/github.com/goreleaser/goreleaser/v2.0.1/goreleaser_Windows_x86_64.zip",
-      "checksum": "10BDAAB0840D96AAEFA61758759483BE123B4E74A6B203186FA23937B64B1A7E",
+      "id": "github_release/github.com/goreleaser/goreleaser/v2.8.2/goreleaser_Windows_x86_64.zip",
+      "checksum": "30D6F5E308708CBE09D249D58F7C6473058DC4B54513B2C8B418ECBF77B5ECD9",
       "algorithm": "sha256"
     },
     {
@@ -131,8 +131,18 @@
       "algorithm": "sha256"
     },
     {
-      "id": "registries/github_content/github.com/aquaproj/aqua-registry/v4.192.0/registry.yaml",
-      "checksum": "55D1CD3725E01408DB9C8E1E2205CC51C0CD24703D5DD09A1714BA069D8AD70A",
+      "id": "github_release/github.com/suzuki-shunsuke/cmdx/v2.0.1/cmdx_windows_amd64.zip",
+      "checksum": "26BF4BAA495AF54456BACF5A16416AD5B6C756F5661ABD56E73C08CBCEAD65FE",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "github_release/github.com/suzuki-shunsuke/cmdx/v2.0.1/cmdx_windows_arm64.zip",
+      "checksum": "4BB8F4F65EDCE1D3AAE86168075B2E2CD3377E9A72E5D5F51EE097BFABE5DEE2",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "registries/github_content/github.com/aquaproj/aqua-registry/v4.338.0/registry.yaml",
+      "checksum": "BA3EA319B31877675D4CD10064A35080966CDAE2BB8B91D0FE8F80D7B276A711",
       "algorithm": "sha256"
     }
   ]
