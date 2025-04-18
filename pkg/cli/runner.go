@@ -25,10 +25,10 @@ type LDFlags struct {
 }
 
 func (r *Runner) Run(ctx context.Context, args ...string) error {
-	return helpall.With(&cli.Command{ //nolint:wrapcheck
+	return helpall.With(vcmd.With(&cli.Command{ //nolint:wrapcheck
 		Name:    "yodoc",
 		Usage:   "",
-		Version: r.LDFlags.Version + " (" + r.LDFlags.Commit + ")",
+		Version: r.LDFlags.Version,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "log-level",
@@ -59,11 +59,6 @@ func (r *Runner) Run(ctx context.Context, args ...string) error {
 				logE:   r.LogE,
 				stdout: r.Stdout,
 			}).command(),
-			vcmd.New(&vcmd.Command{
-				Name:    "yodoc",
-				Version: r.LDFlags.Version,
-				SHA:     r.LDFlags.Commit,
-			}),
 		},
-	}, nil).Run(ctx, args)
+	}, r.LDFlags.Commit), nil).Run(ctx, args)
 }

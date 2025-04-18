@@ -27,3 +27,9 @@ jobs:
         env:
           AQUA_GITHUB_TOKEN: ${{github.token}}
       - run: go test -v ./... -race -covermode=atomic
+      - run: cmdx i
+      - run: yodoc -v
+      - run: yodoc version
+      - run: yodoc version -j
+      - run: yodoc --help
+      - run: yodoc help-all
