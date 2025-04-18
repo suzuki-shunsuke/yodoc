@@ -19,17 +19,17 @@ func NewRead(fs afero.Fs, base string) *Read {
 	}
 }
 
-func (r *Read) path(fileName string) string {
-	if filepath.IsAbs(fileName) {
-		return fileName
-	}
-	return filepath.Join(r.base, fileName)
-}
-
 func (r *Read) Run(fileName string) (string, error) {
 	s, err := afero.ReadFile(r.fs, r.path(fileName))
 	if err != nil {
 		return "", fmt.Errorf("read a file: %w", err)
 	}
 	return string(s), nil
+}
+
+func (r *Read) path(fileName string) string {
+	if filepath.IsAbs(fileName) {
+		return fileName
+	}
+	return filepath.Join(r.base, fileName)
 }
