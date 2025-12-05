@@ -6,13 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
-	"github.com/suzuki-shunsuke/logrus-error/logerr"
+	"github.com/suzuki-shunsuke/slog-error/slogerr"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
 	"github.com/suzuki-shunsuke/yodoc/pkg/expr"
 	"github.com/suzuki-shunsuke/yodoc/pkg/frontmatter"
@@ -27,7 +27,7 @@ type Param struct {
 	Files          []string
 }
 
-func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) error {
+func (c *Controller) Run(ctx context.Context, _ *slog.Logger, param *Param) error {
 	// find and read config
 	cfg := &config.Config{}
 	cfgPath, err := c.readConfig(param.ConfigFilePath, cfg)
@@ -60,9 +60,7 @@ func (c *Controller) Run(ctx context.Context, _ *logrus.Entry, param *Param) err
 
 	for _, file := range files {
 		if err := c.handleTemplate(ctx, renderer, src, dest, file, cfgPath); err != nil {
-			return logerr.WithFields(err, logrus.Fields{ //nolint:wrapcheck
-				"file": file,
-			})
+			return slogerr.With(err, "file", file) //nolint:wrapcheck
 		}
 	}
 	return nil

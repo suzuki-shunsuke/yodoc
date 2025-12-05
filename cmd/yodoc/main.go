@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 
-	"github.com/sirupsen/logrus"
-	"github.com/suzuki-shunsuke/logrus-error/logerr"
+	"github.com/suzuki-shunsuke/slog-error/slogerr"
+	"github.com/suzuki-shunsuke/slog-util/slogutil"
 	"github.com/suzuki-shunsuke/yodoc/pkg/cli"
 	"github.com/suzuki-shunsuke/yodoc/pkg/controller/run"
-	"github.com/suzuki-shunsuke/yodoc/pkg/log"
 )
 
 var (
@@ -22,10 +22,38 @@ var (
 )
 
 func main() {
-	logE := log.New(version)
-	if err := core(logE); err != nil {
-		logerr.WithError(logE, err).Fatal(errMsg(err))
+	if code := core(); code != 0 {
+		os.Exit(code)
 	}
+}
+
+func core() int {
+	logLevelVar := &slog.LevelVar{}
+	logger := slogutil.New(&slogutil.InputNew{
+		Name:    "yodoc",
+		Version: version,
+		Out:     os.Stderr,
+		Level:   logLevelVar,
+	})
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	runner := cli.Runner{
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+		LDFlags: &cli.LDFlags{
+			Version: version,
+			Commit:  commit,
+			Date:    date,
+		},
+		Logger:      logger,
+		LogLevelVar: logLevelVar,
+	}
+	if err := runner.Run(ctx, os.Args...); err != nil {
+		slogerr.WithError(logger, err).Error(errMsg(err))
+		return 1
+	}
+	return 0
 }
 
 func errMsg(err error) string {
@@ -49,21 +77,4 @@ func errMsg(err error) string {
 		}
 	}
 	return msg
-}
-
-func core(logE *logrus.Entry) error {
-	runner := cli.Runner{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		LDFlags: &cli.LDFlags{
-			Version: version,
-			Commit:  commit,
-			Date:    date,
-		},
-		LogE: logE,
-	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-	return runner.Run(ctx, os.Args...) //nolint:wrapcheck
 }
