@@ -75,8 +75,8 @@ func (p *Parser) parse(ln int, line string, state *State) { //nolint:cyclop
 	if strings.HasPrefix(line, "#-yodoc # ") {
 		return
 	}
-	if strings.HasPrefix(line, "#-yodoc dir ") {
-		state.Current.Dir = strings.TrimPrefix(line, "#-yodoc dir ")
+	if s, ok := strings.CutPrefix(line, "#-yodoc dir "); ok {
+		state.Current.Dir = s
 		return
 	}
 	if strings.HasPrefix(line, "```") {

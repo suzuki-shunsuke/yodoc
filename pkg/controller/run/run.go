@@ -112,10 +112,10 @@ func (c *Controller) getDest(src, dest, file string, fm *frontmatter.Frontmatter
 		return filepath.Join(filepath.Dir(file), fm.Dest), nil
 	}
 	if src == dest {
-		if s := strings.TrimSuffix(file, "_yodoc.md"); s != file {
+		if s, ok := strings.CutSuffix(file, "_yodoc.md"); ok {
 			return s + ".md", nil
 		}
-		if s := strings.TrimSuffix(file, "_yodoc.mdx"); s != file {
+		if s, ok := strings.CutSuffix(file, "_yodoc.mdx"); ok {
 			return s + ".mdx", nil
 		}
 		return "", errors.New("the file name must end with _yodoc.md or _yodoc.mdx")
