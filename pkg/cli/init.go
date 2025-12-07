@@ -32,10 +32,10 @@ If the file already exists, this command does nothing.
 
 func (lc *initCommand) action(ctx context.Context, logger *slogutil.Logger, flags *Flags) error {
 	ctrl := initcmd.NewController(afero.NewOsFs())
-	if err := logger.SetLevel(flags.LogLevel.V()); err != nil {
+	if err := logger.SetLevel(flags.LogLevel); err != nil {
 		return fmt.Errorf("set log level: %w", err)
 	}
-	if err := logger.SetColor(flags.LogColor.V()); err != nil {
+	if err := logger.SetColor(flags.LogColor); err != nil {
 		return fmt.Errorf("set log color: %w", err)
 	}
 	return ctrl.Init(ctx, logger.Logger) //nolint:wrapcheck
