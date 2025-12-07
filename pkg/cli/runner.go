@@ -24,9 +24,10 @@ func Run(version string) int {
 	defer stop()
 	runner := &Runner{}
 	if err := runner.Run(ctx, logger, &urfave.Env{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
+		Stdin:   os.Stdin,
+		Stdout:  os.Stdout,
+		Stderr:  os.Stderr,
+		Version: version,
 	}); err != nil {
 		slogerr.WithError(logger.Logger, err).Error(errMsg(err))
 		return 1
