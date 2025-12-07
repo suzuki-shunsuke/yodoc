@@ -364,7 +364,7 @@ func (c *Controller) render(renderer Renderer, file string, delim *frontmatter.D
 	return buf.String(), nil
 }
 
-// setRenderer configres the renderer based on config.
+// setRenderer configures the renderer based on config.
 func (c *Controller) setRenderer(renderer Renderer, cfg *config.Config) error {
 	renderer.SetDelims(cfg.Delim.GetLeft(), cfg.Delim.GetRight())
 	return nil
