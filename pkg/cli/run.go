@@ -37,6 +37,9 @@ func (rc *runCommand) action(ctx context.Context, cmd *cli.Command, logger *slog
 	if err := logger.SetLevel(cmd.String("log-level")); err != nil {
 		return fmt.Errorf("set log level: %w", err)
 	}
+	if err := logger.SetColor(cmd.String("log-color")); err != nil {
+		return fmt.Errorf("set log color: %w", err)
+	}
 	return ctrl.Run(ctx, logger.Logger, &run.Param{ //nolint:wrapcheck
 		ConfigFilePath: cmd.String("config"),
 		Files:          cmd.Args().Slice(),
