@@ -40,31 +40,42 @@ func Run(version string) int {
 
 type Runner struct{}
 
+type Flags struct {
+	LogLevel *urfave.StringFlag
+	LogColor *urfave.StringFlag
+	Config   *urfave.StringFlag
+}
+
 func (r *Runner) Run(ctx context.Context, logger *slogutil.Logger, env *urfave.Env) error {
+	flags := &Flags{
+		LogLevel: urfave.String(&cli.StringFlag{
+			Name:    "log-level",
+			Usage:   "log level",
+			Sources: cli.EnvVars("YODOC_LOG_LEVEL"),
+		}),
+		LogColor: urfave.String(&cli.StringFlag{
+			Name:    "log-color",
+			Usage:   "Log color. One of 'auto' (default), 'always', 'never'",
+			Sources: cli.EnvVars("YODOC_LOG_COLOR"),
+		}),
+		Config: urfave.String(&cli.StringFlag{
+			Name:    "config",
+			Aliases: []string{"c"},
+			Usage:   "Configuration file path",
+			Sources: cli.EnvVars("YODOC_CONFIG"),
+		}),
+	}
 	return urfave.Command(env, &cli.Command{ //nolint:wrapcheck
 		Name:  "yodoc",
 		Usage: "Test command results and embed them into document",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "log-level",
-				Usage:   "log level",
-				Sources: cli.EnvVars("YODOC_LOG_LEVEL"),
-			},
-			&cli.StringFlag{
-				Name:    "log-color",
-				Usage:   "Log color. One of 'auto' (default), 'always', 'never'",
-				Sources: cli.EnvVars("YODOC_LOG_COLOR"),
-			},
-			&cli.StringFlag{
-				Name:    "config",
-				Aliases: []string{"c"},
-				Usage:   "Configuration file path",
-				Sources: cli.EnvVars("YODOC_CONFIG"),
-			},
+			flags.LogLevel,
+			flags.LogColor,
+			flags.Config,
 		},
 		Commands: []*cli.Command{
-			(&initCommand{}).command(logger),
-			(&runCommand{}).command(logger),
+			(&initCommand{}).command(logger, flags),
+			(&runCommand{}).command(logger, flags),
 		},
 	}).Run(ctx, env.Args)
 }
