@@ -55,20 +55,20 @@ func Parse(scanner *bufio.Scanner) (*Frontmatter, string, int, error) {
 	}
 
 	matterLines := make([]string, 0, 8) //nolint:mnd
-	breaked := false
+	broken := false
 	ln := 1
 	line := ""
 	for scanner.Scan() {
 		ln++
 		line = scanner.Text()
-		if breaked {
+		if broken {
 			if line == "" {
 				continue
 			}
 			break
 		}
 		if line == "---" {
-			breaked = true
+			broken = true
 			continue
 		}
 		matterLines = append(matterLines, line)

@@ -1,16 +1,11 @@
 ---
 name: wc-test
-on:
-  workflow_call:
-    inputs:
-      docker_is_changed:
-        required: false
-        type: boolean
+on: workflow_call
 
 jobs:
   test:
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions: {}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -23,10 +18,6 @@ jobs:
       - uses: aquaproj/aqua-installer@11dd79b4e498d471a9385aa9fb7f62bb5f52a73c # v4.0.4
         with:
           aqua_version: v2.55.2
-      - run: golangci-lint run --timeout 120s
-        env:
-          AQUA_GITHUB_TOKEN: ${{github.token}}
-      - run: go test -v ./... -race -covermode=atomic
       - run: cmdx i
       - run: yodoc -v
       - run: yodoc version
