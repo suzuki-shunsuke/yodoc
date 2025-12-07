@@ -8,8 +8,8 @@ require (
 	github.com/spf13/afero v1.15.0
 	github.com/suzuki-shunsuke/gen-go-jsonschema v0.1.0
 	github.com/suzuki-shunsuke/slog-error v0.2.1
-	github.com/suzuki-shunsuke/slog-util v0.2.2
-	github.com/suzuki-shunsuke/urfave-cli-v3-util v0.1.0
+	github.com/suzuki-shunsuke/slog-util v0.3.0
+	github.com/suzuki-shunsuke/urfave-cli-v3-util v0.1.1
 	github.com/urfave/cli/v3 v3.6.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -31,6 +31,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
+	github.com/suzuki-shunsuke/go-error-with-exit-code v1.0.0 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect

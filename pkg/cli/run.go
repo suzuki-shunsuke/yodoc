@@ -3,22 +3,19 @@ package cli
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/spf13/afero"
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
+	"github.com/suzuki-shunsuke/urfave-cli-v3-util/urfave"
 	"github.com/suzuki-shunsuke/yodoc/pkg/config"
 	"github.com/suzuki-shunsuke/yodoc/pkg/controller/run"
 	"github.com/suzuki-shunsuke/yodoc/pkg/render"
 	"github.com/urfave/cli/v3"
 )
 
-type runCommand struct {
-	logger      *slog.Logger
-	logLevelVar *slog.LevelVar
-}
+type runCommand struct{}
 
-func (rc *runCommand) command() *cli.Command {
+func (rc *runCommand) command(logger *slogutil.Logger) *cli.Command {
 	return &cli.Command{
 		Name:      "run",
 		Usage:     "Generate documents",
@@ -27,20 +24,20 @@ func (rc *runCommand) command() *cli.Command {
 
 $ yodoc run
 `,
-		Action: rc.action,
+		Action: urfave.Action(rc.action, logger),
 	}
 }
 
-func (rc *runCommand) action(ctx context.Context, cmd *cli.Command) error {
+func (rc *runCommand) action(ctx context.Context, cmd *cli.Command, logger *slogutil.Logger) error {
 	fs := afero.NewOsFs()
 	configReader := config.NewReader(fs)
 	renderer := render.NewRenderer(fs)
 	finder := config.NewFinder(fs)
 	ctrl := run.NewController(fs, finder, configReader, renderer)
-	if err := slogutil.SetLevel(rc.logLevelVar, cmd.String("log-level")); err != nil {
+	if err := logger.SetLevel(cmd.String("log-level")); err != nil {
 		return fmt.Errorf("set log level: %w", err)
 	}
-	return ctrl.Run(ctx, rc.logger, &run.Param{ //nolint:wrapcheck
+	return ctrl.Run(ctx, logger.Logger, &run.Param{ //nolint:wrapcheck
 		ConfigFilePath: cmd.String("config"),
 		Files:          cmd.Args().Slice(),
 	})
