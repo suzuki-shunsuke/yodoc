@@ -27,7 +27,10 @@ func Run(version string) int {
 		Stdin:   os.Stdin,
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
+		Program: "yodoc",
 		Version: version,
+		Getenv:  os.Getenv,
+		Args:    os.Args,
 	}); err != nil {
 		slogerr.WithError(logger.Logger, err).Error(errMsg(err))
 		return 1
