@@ -17,10 +17,13 @@ type runCommand struct{}
 type RunFlags struct {
 	*Flags
 
-	Args []string
+	Files []string
 }
 
 func (rc *runCommand) command(logger *slogutil.Logger, flags *Flags) *cli.Command {
+	runFlags := &RunFlags{
+		Flags: flags,
+	}
 	return &cli.Command{
 		Name:      "run",
 		Usage:     "Generate documents",
@@ -29,11 +32,14 @@ func (rc *runCommand) command(logger *slogutil.Logger, flags *Flags) *cli.Comman
 
 $ yodoc run
 `,
-		Action: func(ctx context.Context, cmd *cli.Command) error {
-			runFlags := &RunFlags{
-				Flags: flags,
-				Args:  cmd.Args().Slice(),
-			}
+		Arguments: []cli.Argument{
+			&cli.StringArgs{
+				Name:        "file",
+				Max:         -1,
+				Destination: &runFlags.Files,
+			},
+		},
+		Action: func(ctx context.Context, _ *cli.Command) error {
 			return rc.action(ctx, logger, runFlags)
 		},
 	}
@@ -53,6 +59,6 @@ func (rc *runCommand) action(ctx context.Context, logger *slogutil.Logger, flags
 	}
 	return ctrl.Run(ctx, logger.Logger, &run.Param{ //nolint:wrapcheck
 		ConfigFilePath: flags.Config,
-		Files:          flags.Args,
+		Files:          flags.Files,
 	})
 }
