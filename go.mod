@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/expr-lang/expr v1.17.6
+	github.com/expr-lang/expr v1.17.7
 	github.com/spf13/afero v1.15.0
 	github.com/suzuki-shunsuke/gen-go-jsonschema v0.1.0
 	github.com/suzuki-shunsuke/slog-error v0.2.1
